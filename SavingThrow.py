@@ -36,9 +36,11 @@ import urllib2
 
 
 # Add any URL's to nefarious file lists here:
+NEFARIOUS_FILE_SOURCES = []
+# File format is one path per line.
+# Files to look for may include globbing characters
 # Default is to at least use Apple's files from:
 # https://support.apple.com/en-us/ht203987
-NEFARIOUS_FILE_SOURCES = []
 NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/5c76604f823d45792952/raw/8e8eaa9f69905265912ccc615949505558ff40f6/AppleAdwareList')
 
 CACHE = '/usr/local/share/'
@@ -47,7 +49,8 @@ known_malware = set()
 
 for source in NEFARIOUS_FILE_SOURCES:
     try:
-        syslog.syslog(syslog.LOG_ALERT, "Attempting to update Adware list: %s" % source)
+        syslog.syslog(syslog.LOG_ALERT,
+                      "Attempting to update Adware list: %s" % source)
         malware_list = urllib2.urlopen(source).read()
 
         # Update our cached copy
@@ -56,12 +59,12 @@ for source in NEFARIOUS_FILE_SOURCES:
 
     except urllib2.URLError as e:
         # Use the cached copy if it exists.
-        syslog.syslog(syslog.LOG_ALERT, "Update failed: %s. Looking for cached copy" % e.message)
+        syslog.syslog(syslog.LOG_ALERT,
+                      "Update failed: %s. Looking for cached copy" % e.message)
         with open(os.path.join(CACHE, os.path.basename(source)), 'r') as f:
             malware_list = f.read()
 
     known_malware.update({file for file in malware_list.split('\n')})
-print(known_malware)
 
 found_malware = {match for filename in known_malware for match in
                  glob.glob(filename)}
@@ -74,8 +77,7 @@ found_malware = {match for filename in known_malware for match in
 projectx_files = {
     '/Library/LaunchAgents/com.*.agent.plist',
     '/Library/LaunchDaemons/com.*.helper.plist',
-    '/Library/LaunchDaemons/com.*.daemon.plist',
-}
+    '/Library/LaunchDaemons/com.*.daemon.plist'}
 
 projectx_candidates = {match for filename in projectx_files for match in
                  glob.glob(filename)}
