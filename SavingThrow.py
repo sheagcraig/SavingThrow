@@ -32,6 +32,7 @@ import re
 import shutil
 import sys
 import syslog
+import time
 import urllib2
 
 
@@ -43,7 +44,9 @@ NEFARIOUS_FILE_SOURCES = []
 # https://support.apple.com/en-us/ht203987
 NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/5c76604f823d45792952/raw/8e8eaa9f69905265912ccc615949505558ff40f6/AppleAdwareList')
 
-CACHE = '/usr/local/share/'
+CACHE = '/Library/Application Support/SavingThrow'
+if not os.path.exists(CACHE):
+    os.mkdir(CACHE)
 
 known_malware = set()
 
@@ -111,7 +114,6 @@ if len(sys.argv) == 1:
 
 elif "--remove" in sys.argv:
     # Removal script.
-    syslog.syslog(syslog.LOG_ALERT, "Looking for malware")
     for item in found_malware:
         try:
             if os.path.isdir(item):
@@ -119,6 +121,20 @@ elif "--remove" in sys.argv:
             elif os.path.isfile(item):
                 os.remove(item)
             syslog.syslog(syslog.LOG_ALERT, "Removed malware file:  %s" % item)
+        except OSError as e:
+            syslog.syslog(syslog.LOG_ALERT,
+                          "Failed to remove malware file:  %s, %s" % (item, e))
+
+elif "--quarantine" in sys.argv:
+    # Quarantine script.
+    backup_dir = os.path.join(CACHE, time.strftime("%Y%m%d-%H%M%S"))
+    os.mkdir(backup_dir)
+
+    for item in found_malware:
+        try:
+            shutil.move(item, backup_dir)
+            syslog.syslog(syslog.LOG_ALERT, "Quarantined malware file:  %s"
+                          % item)
         except OSError as e:
             syslog.syslog(syslog.LOG_ALERT,
                           "Failed to remove malware file:  %s, %s" % (item, e))
