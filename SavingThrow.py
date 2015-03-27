@@ -127,8 +127,9 @@ elif "--remove" in sys.argv:
 
 elif "--quarantine" in sys.argv:
     # Quarantine script.
-    backup_dir = os.path.join(CACHE, time.strftime("%Y%m%d-%H%M%S"))
-    os.mkdir(backup_dir)
+    if found_malware:
+        backup_dir = os.path.join(CACHE, time.strftime("%Y%m%d-%H%M%S"))
+        os.mkdir(backup_dir)
 
     for item in found_malware:
         try:
@@ -137,4 +138,5 @@ elif "--quarantine" in sys.argv:
                           % item)
         except OSError as e:
             syslog.syslog(syslog.LOG_ALERT,
-                          "Failed to remove malware file:  %s, %s" % (item, e))
+                          "Failed to quarantine malware file:  %s, %s"
+                          % (item, e))
