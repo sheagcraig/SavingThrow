@@ -40,7 +40,6 @@ NEFARIOUS_FILE_SOURCES = []
 # https://support.apple.com/en-us/ht203987
 NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/5c76604f823d45792952/raw/8e8eaa9f69905265912ccc615949505558ff40f6/AppleAdwareList')
 
-
 CACHE = '/Library/Application Support/SavingThrow'
 if not os.path.exists(CACHE):
     os.mkdir(CACHE)
@@ -62,7 +61,7 @@ def build_argparser():
     return parser
 
 
-class logger():
+class Logger():
     """Simple logging class."""
     def __init__(self, verbose=False):
         self.verbose = verbose
@@ -74,12 +73,20 @@ class logger():
             print(message)
 
 
+# Make our global logger.
+logger = Logger()
+
+
 def get_projectX_files():
-    # Look for "ProjectX" variants.
-    # This adware seems to have a different name each time it pops up.
-    # Apple's solution is too broad. We look at the files Apple suggests,
-    # but then also search within to see if they are calling a known
-    # binary file, "agent.app/Contents/MacOS/agent".
+    """Return a set of vSearch agent-related LaunchD configuration
+    files.
+
+    This adware seems to have a different name each time it pops up.
+    Apple's solution is too broad. We look at the files Apple suggests,
+    but then also search within to see if they are calling a known
+    binary file, "agent.app/Contents/MacOS/agent".
+
+    """
     projectx_files = {
         '/Library/LaunchAgents/com.*.agent.plist',
         '/Library/LaunchDaemons/com.*.helper.plist',
@@ -106,18 +113,17 @@ def get_projectX_files():
     return result
 
 
-def main():
+def load_malware_description_files(sources):
+    """Given a list of URLs to malware description files, attempt to
+    download, parse, and generate a master set of targeted files.
 
-    # Handle command line arguments
-    parser = build_argparser()
-    args = parser.parse_args()
-    l = logger(args.verbose)
+    Returns a set of nefarious files.
 
+    """
     known_malware = set()
-
-    for source in NEFARIOUS_FILE_SOURCES:
+    for source in sources:
         try:
-            l.log("Attempting to update Adware list: %s" % source)
+            logger.log("Attempting to update Adware list: %s" % source)
             malware_list = urllib2.urlopen(source).read()
 
             # Update our cached copy
@@ -126,15 +132,31 @@ def main():
 
         except urllib2.URLError as e:
             # Use the cached copy if it exists.
-            l.log("Update failed: %s. Looking for cached copy" % e.message)
+            logger.log("Update failed: %s. Looking for cached copy" % e.message)
             try:
                 with open(os.path.join(CACHE, os.path.basename(source)), 'r') as f:
                     malware_list = f.read()
             except IOError as e:
-                l.log("Error: No cached copy of %s or other error %s" %
+                logger.log("Error: No cached copy of %s or other error %s" %
                       (source, e.message))
 
         known_malware.update({file for file in malware_list.split('\n')})
+
+    return known_malware
+
+
+def main():
+    """Manage arguments and coordinate our saving throw."""
+    # Handle command line arguments
+    parser = build_argparser()
+    args = parser.parse_args()
+
+    if args.verbose:
+        logger.verbose = True
+
+    known_malware = set()
+    known_malware.update(load_malware_description_files(
+        NEFARIOUS_FILE_SOURCES))
 
     # Look for projectX files.
     known_malware.update(get_projectX_files())
@@ -152,9 +174,9 @@ def main():
                     shutil.rmtree(item)
                 elif os.path.isfile(item):
                     os.remove(item)
-                l.log("Removed malware file:  %s" % item)
+                logger.log("Removed malware file:  %s" % item)
             except OSError as e:
-                l.log("Failed to remove malware file:  %s, %s" % (item, e))
+                logger.log("Failed to remove malware file:  %s, %s" % (item, e))
 
     elif args.quarantine:
         # Quarantine script.
@@ -165,10 +187,10 @@ def main():
         for item in found_malware:
             try:
                 shutil.move(item, backup_dir)
-                l.log("Quarantined malware file:  %s"
+                logger.log("Quarantined malware file:  %s"
                             % item)
             except OSError as e:
-                l.log("Failed to quarantine malware file:  %s, %s" % (item, e))
+                logger.log("Failed to quarantine malware file:  %s, %s" % (item, e))
 
     else:
         # Extension attribute (First arg is always script name).
@@ -182,7 +204,7 @@ def main():
 
         result += '</result>'
 
-        l.log(result)
+        logger.log(result)
         print(result)
 
 
