@@ -74,6 +74,38 @@ class logger():
             print(message)
 
 
+def get_projectX_files():
+    # Look for "ProjectX" variants.
+    # This adware seems to have a different name each time it pops up.
+    # Apple's solution is too broad. We look at the files Apple suggests,
+    # but then also search within to see if they are calling a known
+    # binary file, "agent.app/Contents/MacOS/agent".
+    projectx_files = {
+        '/Library/LaunchAgents/com.*.agent.plist',
+        '/Library/LaunchDaemons/com.*.helper.plist',
+        '/Library/LaunchDaemons/com.*.daemon.plist'}
+
+    projectx_candidates = {match for filename in projectx_files for match in
+                    glob.glob(filename)}
+
+    agent_regex = re.compile('.*/Library/Application Support/(.*)/Agent/agent.app/Contents/MacOS/agent')
+    result = set()
+
+    for candidate in projectx_candidates:
+        with open(candidate, 'r') as candidate_file:
+            launchd_job = candidate_file.read()
+
+        if re.search(agent_regex, launchd_job):
+            result.add(candidate)
+            # If we find a Launch[Agent|Daemon] that has ProgramArguments
+            # which runs "agent", find the unique name for this instance.
+            # We can then use it to find the Application Support folder.
+            obfuscated_name = re.search(agent_regex, launchd_job).group(1)
+            result.add('/Library/Application Support/%s' % obfuscated_name)
+
+    return result
+
+
 def main():
 
     # Handle command line arguments
@@ -104,20 +136,11 @@ def main():
 
         known_malware.update({file for file in malware_list.split('\n')})
 
+    # Look for projectX files.
+    known_malware.update(get_projectX_files())
+
+    # Build a set of malware files that are on the drive.
     found_malware = {match for filename in known_malware for match in
-                    glob.glob(filename)}
-
-    # Look for "ProjectX" variants.
-    # This adware seems to have a different name each time it pops up.
-    # Apple's solution is too broad. We look at the files Apple suggests,
-    # but then also search within to see if they are calling a known
-    # binary file, "agent.app/Contents/MacOS/agent".
-    projectx_files = {
-        '/Library/LaunchAgents/com.*.agent.plist',
-        '/Library/LaunchDaemons/com.*.helper.plist',
-        '/Library/LaunchDaemons/com.*.daemon.plist'}
-
-    projectx_candidates = {match for filename in projectx_files for match in
                     glob.glob(filename)}
 
     # Is this an EA or a script execution?
