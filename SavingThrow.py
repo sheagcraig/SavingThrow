@@ -203,6 +203,25 @@ def extension_attribute(files):
     print(result)
 
 
+def unload_and_disable_launchd_jobs(files):
+    """Given an iterable of paths, attempt to unload and disable any
+    launchd configuration files.
+
+    """
+    # Find system-level LaunchD config files.
+    conf_locs = {'/Library/LaunchAgents',
+                 '/Library/LaunchDaemons',
+                 '/System/Library/LaunchAgents',
+                 '/System/Library/LaunchDaemons'}
+
+    # Add valid per-user config locations.
+    for user_home in os.listdir('/Users'):
+        candidate_launchd_loc = os.path.join('/Users', user_home, 'Library/LaunchAgents')
+        if os.path.exists(candidate_launchd_loc):
+            conf_locs.add(candidate_launchd_loc)
+    launchd_config_files = {file for file in files for conf_loc in conf_locs if file.find(conf_loc) == 0}
+
+
 def main():
     """Manage arguments and coordinate our saving throw."""
     # Handle command line arguments
