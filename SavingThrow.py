@@ -95,8 +95,12 @@ def main():
         except urllib2.URLError as e:
             # Use the cached copy if it exists.
             l.log("Update failed: %s. Looking for cached copy" % e.message)
-            with open(os.path.join(CACHE, os.path.basename(source)), 'r') as f:
-                malware_list = f.read()
+            try:
+                with open(os.path.join(CACHE, os.path.basename(source)), 'r') as f:
+                    malware_list = f.read()
+            except IOError as e:
+                l.log("Error: No cached copy of %s or other error %s" %
+                      (source, e.message))
 
         known_malware.update({file for file in malware_list.split('\n')})
 
@@ -116,20 +120,7 @@ def main():
     projectx_candidates = {match for filename in projectx_files for match in
                     glob.glob(filename)}
 
-    agent_regex = re.compile('.*/Library/Application Support/(.*)/Agent/agent.app/Contents/MacOS/agent')
-    for candidate in projectx_candidates:
-        with open(candidate, 'r') as candidate_file:
-            launchd_job = candidate_file.read()
-
-        if re.search(agent_regex, launchd_job):
-            found_malware.add(candidate)
-            # If we find a Launch[Agent|Daemon] that has ProgramArguments
-            # which runs "agent", find the unique name for this instance.
-            # We can then use it to find the Application Support folder.
-            obfuscated_name = re.search(agent_regex, launchd_job).group(1)
-            found_malware.add('/Library/Application Support/%s' % obfuscated_name)
-
-    # Is this an EA or a script execution
+    # Is this an EA or a script execution?
     if args.remove:
         # Removal script.
         for item in found_malware:
