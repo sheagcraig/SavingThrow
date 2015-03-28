@@ -2,12 +2,7 @@
 """SavingThrow
 
 Identify or remove files known to be involved in Adware/Malware
-infection.
-
-Most of the code applies to building a list of malware files. Thus,
-both extension attribute and removal handling are included.
-
-Cleans files as a Casper script policy if --remove is passed as an arg.
+infection, based on curated lists of associated files.
 
 Copyright (C) 2015 Shea G Craig <shea.craig@da.org>
 
@@ -67,9 +62,16 @@ def build_argparser():
     return parser
 
 
-def log(message):
-    # TODO log and optionally print with verbose flag on
-    pass
+class logger():
+    """Simple logging class."""
+    def __init__(self, verbose=False):
+        self.verbose = verbose
+
+    def log(self, message, log_level=syslog.LOG_ALERT):
+        """Log to the syslog, and if verbose, also to stdout."""
+        syslog.syslog(log_level, message)
+        if self.verbose:
+            print(message)
 
 
 def main():
@@ -77,13 +79,13 @@ def main():
     # Handle command line arguments
     parser = build_argparser()
     args = parser.parse_args()
+    l = logger(args.verbose)
 
     known_malware = set()
 
     for source in NEFARIOUS_FILE_SOURCES:
         try:
-            syslog.syslog(syslog.LOG_ALERT,
-                        "Attempting to update Adware list: %s" % source)
+            l.log("Attempting to update Adware list: %s" % source)
             malware_list = urllib2.urlopen(source).read()
 
             # Update our cached copy
@@ -92,8 +94,7 @@ def main():
 
         except urllib2.URLError as e:
             # Use the cached copy if it exists.
-            syslog.syslog(syslog.LOG_ALERT,
-                        "Update failed: %s. Looking for cached copy" % e.message)
+            l.log("Update failed: %s. Looking for cached copy" % e.message)
             with open(os.path.join(CACHE, os.path.basename(source)), 'r') as f:
                 malware_list = f.read()
 
@@ -137,10 +138,9 @@ def main():
                     shutil.rmtree(item)
                 elif os.path.isfile(item):
                     os.remove(item)
-                syslog.syslog(syslog.LOG_ALERT, "Removed malware file:  %s" % item)
+                l.log("Removed malware file:  %s" % item)
             except OSError as e:
-                syslog.syslog(syslog.LOG_ALERT,
-                            "Failed to remove malware file:  %s, %s" % (item, e))
+                l.log("Failed to remove malware file:  %s, %s" % (item, e))
 
     elif args.quarantine:
         # Quarantine script.
@@ -151,12 +151,10 @@ def main():
         for item in found_malware:
             try:
                 shutil.move(item, backup_dir)
-                syslog.syslog(syslog.LOG_ALERT, "Quarantined malware file:  %s"
+                l.log("Quarantined malware file:  %s"
                             % item)
             except OSError as e:
-                syslog.syslog(syslog.LOG_ALERT,
-                            "Failed to quarantine malware file:  %s, %s"
-                            % (item, e))
+                l.log("Failed to quarantine malware file:  %s, %s" % (item, e))
 
     else:
         # Extension attribute (First arg is always script name).
@@ -168,7 +166,10 @@ def main():
         else:
             result += 'False'
 
-        print('%s</result>' % result)
+        result += '</result>'
+
+        l.log(result)
+        print(result)
 
 
 if __name__ == '__main__':
