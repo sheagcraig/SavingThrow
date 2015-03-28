@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 
+# Import ALL the modules!
 import argparse
 import glob
 import os
@@ -45,22 +46,6 @@ if not os.path.exists(CACHE):
     os.mkdir(CACHE)
 
 
-def build_argparser():
-    """Create our argument parser."""
-    parser = argparse.ArgumentParser(description="Modular Adware/Malware "
-                                     "Extension Attribute and Removal Script")
-    parser.add_argument('jamf-arguments', nargs='*')
-    parser.add_argument('-v', '--verbose', action="store_true")
-    mode_parser = parser.add_mutually_exclusive_group()
-    mode_parser.add_argument(
-        "-r", "--remove", help="Remove offending files.", action='store_true')
-    mode_parser.add_argument(
-        "-q", "--quarantine", help="Move offending files to quarantine "
-        "location.", action='store_true')
-
-    return parser
-
-
 class Logger():
     """Simple logging class."""
     def __init__(self, verbose=False):
@@ -75,6 +60,29 @@ class Logger():
 
 # Make our global logger.
 logger = Logger()
+
+def build_argparser():
+    """Create our argument parser."""
+    description = ("Modular Adware/Malware Extension Attribute and "
+                   "Removal Script. Call with no arguments to run as "
+                   "an extension attribute, or with --remove or "
+                   "--quarantine to operate as a cleanup tool.")
+    epilog = ("Roll to save against paralyzation, lest the Gelatinous "
+              "Cube anesthetizes, and ultimately, digests you.")
+    parser = argparse.ArgumentParser(description=description, epilog=epilog)
+    help = ("Accepts all passed positional arguments (or none) to "
+            "allow Casper script usage.")
+    parser.add_argument('jamf-arguments', nargs='*', help=help)
+    parser.add_argument('-v', '--verbose', action="store_true",
+                        help="Print to stdout as well as syslog.")
+    mode_parser = parser.add_mutually_exclusive_group()
+    mode_parser.add_argument(
+        "-r", "--remove", help="Remove offending files.", action='store_true')
+    mode_parser.add_argument(
+        "-q", "--quarantine", help="Move offending files to quarantine "
+        "location.", action='store_true')
+
+    return parser
 
 
 def get_projectX_files():
@@ -145,6 +153,56 @@ def load_malware_description_files(sources):
     return known_malware
 
 
+def remove(files):
+    """Delete identified files and directories."""
+    for item in files:
+        try:
+            if os.path.isdir(item):
+                shutil.rmtree(item)
+            elif os.path.isfile(item):
+                os.remove(item)
+            logger.log("Removed malware file:  %s" % item)
+        except OSError as e:
+            logger.log("Failed to remove malware file:  %s, %s" % (item, e))
+
+
+def quarantine(files):
+    """Move all identified files to a timestamped folder in our cache.
+
+    """
+    # Let's not bother if the list is empty.
+    if files:
+        backup_dir = os.path.join(CACHE, time.strftime("%Y%m%d-%H%M%S"))
+        os.mkdir(backup_dir)
+
+    for item in files:
+        try:
+            shutil.move(item, backup_dir)
+            logger.log("Quarantined malware file:  %s" % item)
+        except OSError as e:
+            logger.log("Failed to quarantine malware file:  %s, %s" %
+                       (item, e))
+
+
+def extension_attribute(files):
+    """Report back on identified files in a Casper extension attribute
+    format.
+
+    """
+    result = '<result>'
+    if files:
+        result += 'True\n'
+        for item in enumerate(files):
+            result += "%d: %s\n" % item
+    else:
+        result += 'False'
+
+    result += '</result>'
+
+    logger.log(result)
+    print(result)
+
+
 def main():
     """Manage arguments and coordinate our saving throw."""
     # Handle command line arguments
@@ -167,45 +225,11 @@ def main():
 
     # Is this an EA or a script execution?
     if args.remove:
-        # Removal script.
-        for item in found_malware:
-            try:
-                if os.path.isdir(item):
-                    shutil.rmtree(item)
-                elif os.path.isfile(item):
-                    os.remove(item)
-                logger.log("Removed malware file:  %s" % item)
-            except OSError as e:
-                logger.log("Failed to remove malware file:  %s, %s" % (item, e))
-
+        remove(found_malware)
     elif args.quarantine:
-        # Quarantine script.
-        if found_malware:
-            backup_dir = os.path.join(CACHE, time.strftime("%Y%m%d-%H%M%S"))
-            os.mkdir(backup_dir)
-
-        for item in found_malware:
-            try:
-                shutil.move(item, backup_dir)
-                logger.log("Quarantined malware file:  %s"
-                            % item)
-            except OSError as e:
-                logger.log("Failed to quarantine malware file:  %s, %s" % (item, e))
-
+        quarantine(found_malware)
     else:
-        # Extension attribute (First arg is always script name).
-        result = '<result>'
-        if found_malware:
-            result += 'True\n'
-            for item in enumerate(found_malware):
-                result += "%d: %s\n" % item
-        else:
-            result += 'False'
-
-        result += '</result>'
-
-        logger.log(result)
-        print(result)
+        extension_attribute(found_malware)
 
 
 if __name__ == '__main__':
