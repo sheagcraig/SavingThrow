@@ -185,7 +185,11 @@ def quarantine(files):
     """
     # Let's not bother if the list is empty.
     if files:
-        backup_dir = os.path.join(CACHE, time.strftime("%Y%m%d-%H%M%S"))
+        quarantine_dir = os.path.join(CACHE, 'Quarantine')
+        if not os.path.exists(quarantine_dir):
+            os.mkdir(quarantine_dir)
+        backup_dir = os.path.join(quarantine_dir,
+                                  time.strftime("%Y%m%d-%H%M%S"))
         os.mkdir(backup_dir)
 
     for item in files:
@@ -256,6 +260,7 @@ def main():
     known_adware = set()
     known_adware.update(load_adware_description_files(
         NEFARIOUS_FILE_SOURCES))
+    known_adware.add('/tmp/taco')
 
     # Look for projectX files.
     known_adware.update(get_projectX_files())
