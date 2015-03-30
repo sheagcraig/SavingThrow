@@ -1,8 +1,8 @@
 #!/usr/bin/python
 """SavingThrow
 
-Identify or remove files known to be involved in Adware/Malware
-infection, based on curated lists of associated files.
+Identify or remove files known to be involved in Adware infection,
+based on curated lists of associated files.
 
 Copyright (C) 2015 Shea G Craig <shea.craig@da.org>
 
@@ -67,7 +67,7 @@ logger = Logger()
 
 def build_argparser():
     """Create our argument parser."""
-    description = ("Modular Adware/Malware Extension Attribute and "
+    description = ("Modular Adware Extension Attribute and "
                    "Removal Script. Call with no arguments to run as "
                    "an extension attribute, or with --remove or "
                    "--quarantine to operate as a cleanup tool.")
@@ -127,23 +127,23 @@ def get_projectX_files():
     return result
 
 
-def load_malware_description_files(sources):
-    """Given a list of URLs to malware description files, attempt to
+def load_adware_description_files(sources):
+    """Given a list of URLs to adware description files, attempt to
     download, parse, and generate a master set of targeted files.
 
     Returns a set of nefarious files.
 
     """
-    known_malware = set()
+    known_adware = set()
     for source in sources:
         try:
             logger.log("Attempting to update Adware list: %s" % source)
-            malware_list = urllib2.urlopen(source).read()
+            adware_list = urllib2.urlopen(source).read()
 
             # Update our cached copy
             try:
                 with open(os.path.join(CACHE, os.path.basename(source)), 'w') as f:
-                    f.write(malware_list)
+                    f.write(adware_list)
             except IOError as e:
                 if e[0] == 13:
                     print("Please run as root!")
@@ -156,14 +156,14 @@ def load_malware_description_files(sources):
             logger.log("Update failed: %s. Looking for cached copy" % e.message)
             try:
                 with open(os.path.join(CACHE, os.path.basename(source)), 'r') as f:
-                    malware_list = f.read()
+                    adware_list = f.read()
             except IOError as e:
                 logger.log("Error: No cached copy of %s or other error %s" %
                       (source, e.message))
 
-        known_malware.update({file for file in malware_list.split('\n')})
+        known_adware.update({file for file in adware_list.split('\n')})
 
-    return known_malware
+    return known_adware
 
 
 def remove(files):
@@ -174,9 +174,9 @@ def remove(files):
                 shutil.rmtree(item)
             elif os.path.isfile(item):
                 os.remove(item)
-            logger.log("Removed malware file:  %s" % item)
+            logger.log("Removed adware file:  %s" % item)
         except OSError as e:
-            logger.log("Failed to remove malware file:  %s, %s" % (item, e))
+            logger.log("Failed to remove adware file:  %s, %s" % (item, e))
 
 
 def quarantine(files):
@@ -191,9 +191,9 @@ def quarantine(files):
     for item in files:
         try:
             shutil.move(item, backup_dir)
-            logger.log("Quarantined malware file:  %s" % item)
+            logger.log("Quarantined adware file:  %s" % item)
         except OSError as e:
-            logger.log("Failed to quarantine malware file:  %s, %s" %
+            logger.log("Failed to quarantine adware file:  %s, %s" %
                        (item, e))
 
 
@@ -253,26 +253,26 @@ def main():
     if args.verbose:
         logger.verbose = True
 
-    known_malware = set()
-    known_malware.update(load_malware_description_files(
+    known_adware = set()
+    known_adware.update(load_adware_description_files(
         NEFARIOUS_FILE_SOURCES))
 
     # Look for projectX files.
-    known_malware.update(get_projectX_files())
+    known_adware.update(get_projectX_files())
 
-    # Build a set of malware files that are on the drive.
-    found_malware = {match for filename in known_malware for match in
+    # Build a set of adware files that are on the drive.
+    found_adware = {match for filename in known_adware for match in
                     glob.glob(filename)}
 
     # Is this an EA or a script execution?
     if args.remove:
-        remove(found_malware)
+        remove(found_adware)
     elif args.quarantine:
-        quarantine(found_malware)
+        quarantine(found_adware)
     elif args.stdout:
-        report_to_stdout(found_malware)
+        report_to_stdout(found_adware)
     else:
-        extension_attribute(found_malware)
+        extension_attribute(found_adware)
 
 
 if __name__ == '__main__':
