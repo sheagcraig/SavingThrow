@@ -37,3 +37,5 @@ Adware files can be defined in two ways.
 Plans are to include extra tags to help handle more complicated Adware checking routines (see Vsearch handling in SavingThrow.py code).
 
 +1 to save against rods, staves, or wands.
+
+![Image of Gelatinous Cube](http://media.tumblr.com/1f75ab89cd54f34d7441afb1bf4442c3/tumblr_inline_mzsyks2vh31qfgehu.png)
