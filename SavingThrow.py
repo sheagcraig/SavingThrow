@@ -57,6 +57,10 @@ class Logger():
         if self.verbose:
             print(message)
 
+    def vlog(self, message, log_level=syslog.LOG_ALERT):
+        """Log to the syslog, and to stdout."""
+        syslog.syslog(log_level, message)
+        print(message)
 
 # Make our global logger.
 logger = Logger()
@@ -200,8 +204,8 @@ def report_to_stdout(files):
         for item in enumerate(files):
             result += "%d: %s\n" % item
 
-    logger.log(result)
-    print(result)
+    logger.vlog(result)
+
 
 def extension_attribute(files):
     """Report back on identified files in a Casper extension attribute
@@ -218,8 +222,7 @@ def extension_attribute(files):
 
     result += '</result>'
 
-    logger.log(result)
-    print(result)
+    logger.vlog(result)
 
 
 def unload_and_disable_launchd_jobs(files):

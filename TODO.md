@@ -22,6 +22,4 @@
 - Add /Library/Application Support/SavingThrow/Quarantine folder
 - Zip quarantined files
 - Add better caching (don't download if not needed)
-- Ensure always reports to log
-- Add stdout (non ea) option
 - Add XML ADF format.
