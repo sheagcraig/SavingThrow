@@ -64,8 +64,10 @@ class Logger():
         syslog.syslog(log_level, message)
         print(message)
 
+
 # Make our global logger.
 logger = Logger()
+
 
 def build_argparser():
     """Create our argument parser."""
@@ -144,7 +146,8 @@ def load_adware_description_files(sources):
 
             # Update our cached copy.
             try:
-                with open(os.path.join(CACHE, os.path.basename(source)), 'w') as f:
+                with open(os.path.join(CACHE, os.path.basename(source)), 'w') \
+                    as f:
                     f.write(adware_list)
             except IOError as e:
                 if e[0] == 13:
@@ -155,9 +158,11 @@ def load_adware_description_files(sources):
 
         except urllib2.URLError as e:
             # Use the cached copy if it exists.
-            logger.log("Update failed: %s. Looking for cached copy" % e.message)
+            logger.log("Update failed: %s. Looking for cached copy" %
+                       e.message)
             try:
-                with open(os.path.join(CACHE, os.path.basename(source)), 'r') as f:
+                with open(os.path.join(CACHE, os.path.basename(source)), 'r') \
+                    as f:
                     adware_list = f.read()
             except IOError as e:
                 logger.log("Error: No cached copy of %s or other error %s" %
@@ -212,6 +217,7 @@ def quarantine(files):
 
         shutil.rmtree(backup_dir)
 
+
 def report_to_stdout(files):
     """Report back on identified files."""
     result = 'Adware files found: %s\n' % len(files)
@@ -253,10 +259,12 @@ def unload_and_disable_launchd_jobs(files):
 
     # Add valid per-user config locations.
     for user_home in os.listdir('/Users'):
-        candidate_launchd_loc = os.path.join('/Users', user_home, 'Library/LaunchAgents')
+        candidate_launchd_loc = os.path.join('/Users', user_home,
+                                             'Library/LaunchAgents')
         if os.path.exists(candidate_launchd_loc):
             conf_locs.add(candidate_launchd_loc)
-    launchd_config_files = {file for file in files for conf_loc in conf_locs if file.find(conf_loc) == 0}
+    launchd_config_files = {file for file in files for conf_loc in conf_locs if
+                            file.find(conf_loc) == 0}
 
 
 def main():

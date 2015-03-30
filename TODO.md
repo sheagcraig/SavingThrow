@@ -10,12 +10,11 @@
 	- Take a peek through AdwareMedic's stuff
 	- Download and see what MacKeeper craps up
 - Does this need a defaults system, or can it/should it be managed by FORCING people to have to edit the global files list at the beginning?
-- Documentation
 - Tests. Lol.
 - Figure out how to modularize "tricky" files like vsearch LaunchD jobs.
 	- Probably need to go to XML file lists AND
 	- Have a LaunchD type that can regex search through */Library/[LaunchAgents|LaunchDaemons]/com.<something>.<something>.plist
 - Which reminds me-probably makes sense to limit regex search on LaunchD jobs files to the ProgramArguments rather than the entire file.
-- Audit variable names in refactored code to be consistent, helpful, and self-documenting.
 - Add better caching (don't download if not needed)
 - Add XML ADF format.
+- Finish Launchd unloading.
