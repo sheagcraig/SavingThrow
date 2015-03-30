@@ -16,7 +16,6 @@
 	- Probably need to go to XML file lists AND
 	- Have a LaunchD type that can regex search through */Library/[LaunchAgents|LaunchDaemons]/com.<something>.<something>.plist
 - Which reminds me-probably makes sense to limit regex search on LaunchD jobs files to the ProgramArguments rather than the entire file.
-- Ensure all docstrings/comments sub 73 length, punctuated.
 - Audit variable names in refactored code to be consistent, helpful, and self-documenting.
 - Add better caching (don't download if not needed)
 - Add XML ADF format.

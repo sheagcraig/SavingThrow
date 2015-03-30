@@ -38,7 +38,7 @@ import zlib
 # Add any URL's to nefarious file lists here:
 NEFARIOUS_FILE_SOURCES = []
 # File format is one path per line.
-# Files to look for may include globbing characters
+# Files to look for may include globbing characters.
 # Default is to at least use Apple's files from:
 # https://support.apple.com/en-us/ht203987
 NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/5c76604f823d45792952/raw/8e8eaa9f69905265912ccc615949505558ff40f6/AppleAdwareList')
@@ -142,7 +142,7 @@ def load_adware_description_files(sources):
             logger.log("Attempting to update Adware list: %s" % source)
             adware_list = urllib2.urlopen(source).read()
 
-            # Update our cached copy
+            # Update our cached copy.
             try:
                 with open(os.path.join(CACHE, os.path.basename(source)), 'w') as f:
                     f.write(adware_list)
@@ -261,7 +261,7 @@ def unload_and_disable_launchd_jobs(files):
 
 def main():
     """Manage arguments and coordinate our saving throw."""
-    # Handle command line arguments
+    # Handle command line arguments.
     parser = build_argparser()
     args = parser.parse_args()
 
