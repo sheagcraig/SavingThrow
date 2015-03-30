@@ -27,12 +27,16 @@ import glob
 import os
 import re
 import shutil
+import subprocess
 import sys
 import syslog
 import time
 import urllib2
 import zipfile
 import zlib
+
+
+__version__ = '0.0.1'
 
 
 # Add any URL's to nefarious file lists here:
@@ -175,6 +179,7 @@ def load_adware_description_files(sources):
 
 def remove(files):
     """Delete identified files and directories."""
+    unload_and_disable_launchd_jobs(files)
     for item in files:
         try:
             if os.path.isdir(item):
@@ -198,6 +203,8 @@ def quarantine(files):
             os.mkdir(quarantine_dir)
         backup_dir = os.path.join(quarantine_dir, timestamp)
         os.mkdir(backup_dir)
+
+        unload_and_disable_launchd_jobs(files)
 
         for item in files:
             try:
@@ -266,6 +273,14 @@ def unload_and_disable_launchd_jobs(files):
     launchd_config_files = {file for file in files for conf_loc in conf_locs if
                             file.find(conf_loc) == 0}
 
+    # Attempt to unload and disable these files.
+    for file in launchd_config_files:
+        try:
+            subprocess.check_call(['launchctl', 'unload', '-w', file])
+        except subprocess.CalledProcessError as e:
+            # Job may not be loaded, so just log and move on.
+            logger.log(e)
+
 
 def main():
     """Manage arguments and coordinate our saving throw."""
@@ -288,7 +303,8 @@ def main():
     found_adware = {match for filename in known_adware for match in
                     glob.glob(filename)}
 
-    # Is this an EA or a script execution?
+    # Which action should we perform? An EA has no arguments, so make
+    # it the default.
     if args.remove:
         remove(found_adware)
     elif args.quarantine:
