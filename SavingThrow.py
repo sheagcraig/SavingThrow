@@ -152,12 +152,14 @@ def load_adware_description_files(sources):
             # Permalinked gists are a URL with a slash at the end.
             if not cache_file:
                 # Remove the protocol and swap slashes to periods.
-                cache_file = source.split("//")[1].replace("/", ".")
+                # Drop the final slash (period).
+                cache_file = source.split("//")[1].replace("/", ".")[:-1]
             cache_path = os.path.join(CACHE, cache_file)
+            print(cache_path)
 
             # Update our cached copy.
             try:
-                with open(cache_file, 'w') as f:
+                with open(cache_path, 'w') as f:
                     f.write(adware_list)
             except IOError as e:
                 if e[0] == 13:
@@ -171,7 +173,7 @@ def load_adware_description_files(sources):
             logger.log("Update failed: %s. Looking for cached copy" %
                        e.message)
             try:
-                with open(cache_file, 'r') as f:
+                with open(cache_path, 'r') as f:
                     adware_list = f.read()
             except IOError as e:
                 logger.log("Error: No cached copy of %s or other error %s" %
