@@ -14,6 +14,15 @@ Adware Definition Files
 =================
 To configure a list of available ADF sources, edit the ```NEFARIOUS_FILE_SOURCES``` list at the top of SavingThrow.py to include each complete URL (including protocol), which you would like SavingThrow to use. Entries must be single or double quoted, and separated by commas.
 
+Example of two extra ADF sources:
+```
+# Add any URL's to nefarious file lists here:
+NEFARIOUS_FILE_SOURCES = ['https://ourserver.org/SavingThrow/CouponNagger.txt',
+						  'https://ourserver.org/SavingThrow/ClickBait.txt']
+```
+
+SavingThrow includes the files described in Apple's [Kbase Article](https://support.apple.com/en-us/ht203987) on removing common adware as a default.
+
 Adware files can be defined in two ways:
 1. Plain text file with one file path per line.
 	- Bash file globbing characters (```*, ?```) can be used for broader searching, or searching through an arbitrary number of homes, e.g.: ```/Users/*/Library/Preferences/com.crapware.agent.plist```
