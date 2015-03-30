@@ -31,6 +31,8 @@ import sys
 import syslog
 import time
 import urllib2
+import zipfile
+import zlib
 
 
 # Add any URL's to nefarious file lists here:
@@ -183,23 +185,32 @@ def quarantine(files):
     """Move all identified files to a timestamped folder in our cache.
 
     """
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
     # Let's not bother if the list is empty.
     if files:
         quarantine_dir = os.path.join(CACHE, 'Quarantine')
         if not os.path.exists(quarantine_dir):
             os.mkdir(quarantine_dir)
-        backup_dir = os.path.join(quarantine_dir,
-                                  time.strftime("%Y%m%d-%H%M%S"))
+        backup_dir = os.path.join(quarantine_dir, timestamp)
         os.mkdir(backup_dir)
 
-    for item in files:
-        try:
-            shutil.move(item, backup_dir)
-            logger.log("Quarantined adware file:  %s" % item)
-        except OSError as e:
-            logger.log("Failed to quarantine adware file:  %s, %s" %
-                       (item, e))
+        for item in files:
+            try:
+                shutil.move(item, backup_dir)
+                logger.log("Quarantined adware file:  %s" % item)
+            except OSError as e:
+                logger.log("Failed to quarantine adware file:  %s, %s" %
+                        (item, e))
 
+        zpath = os.path.join(quarantine_dir, "%s-Quarantine.zip" % timestamp)
+        with zipfile.ZipFile(zpath, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            os.chdir(backup_dir)
+            for item in files:
+                zipf.write(os.path.basename(item))
+
+        logger.log("Zipped quarantined files to:  %s" % zpath)
+
+        shutil.rmtree(backup_dir)
 
 def report_to_stdout(files):
     """Report back on identified files."""

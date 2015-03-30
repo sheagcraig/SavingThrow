@@ -18,7 +18,5 @@
 - Which reminds me-probably makes sense to limit regex search on LaunchD jobs files to the ProgramArguments rather than the entire file.
 - Ensure all docstrings/comments sub 73 length, punctuated.
 - Audit variable names in refactored code to be consistent, helpful, and self-documenting.
-- Add /Library/Application Support/SavingThrow/Quarantine folder
-- Zip quarantined files
 - Add better caching (don't download if not needed)
 - Add XML ADF format.
