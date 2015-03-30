@@ -23,14 +23,16 @@ NEFARIOUS_FILE_SOURCES = ['https://ourserver.org/SavingThrow/CouponNagger.txt',
 
 SavingThrow includes the files described in Apple's [Kbase Article](https://support.apple.com/en-us/ht203987) on removing common adware as a default.
 
-Adware files can be defined in two ways:
-1. Plain text file with one file path per line.
-	- Bash file globbing characters (```*, ?```) can be used for broader searching, or searching through an arbitrary number of homes, e.g.: ```/Users/*/Library/Preferences/com.crapware.agent.plist```
-	- Lines starting with # will be ignored as comments.
-2. XML files with the following structure are being developed for inclusion in an early preview build.
-	- Root level tag of AdwareDefinition
-		- Files tag
-			- One file tag per file path (including globs).
+Adware files can be defined in two ways.
+
+### Plain text file with one file path per line.
+- Bash file globbing characters (```*, ?```) can be used for broader searching, or searching through an arbitrary number of homes, e.g.: ```/Users/*/Library/Preferences/com.crapware.agent.plist```
+- Lines starting with # will be ignored as comments.
+
+### XML files with the following structure are being developed for inclusion in an early preview build.
+- Root level tag of AdwareDefinition.
+- Files tag.
+- One file tag per file path (including globs).
 
 Plans are to include extra tags to help handle more complicated Adware checking routines (see Vsearch handling in SavingThrow.py code).
 
