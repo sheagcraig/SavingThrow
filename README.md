@@ -8,7 +8,7 @@ SavingThrow pulls its ADF's from user-provided URL's, and caches them locally, u
 
 SavingThrow can report back found Adware files as a Casper extension attribute (*no args*), straight to stdout (```-s/--stdout```), and always outputs its findings to the system log.
 
-It can delete nefarious files (```-r/--remove```), or move them to a quarantine folder at ```/Library/Application Support/SavingThrow/<datetime>/``` (```-q/--quarantine```). Further, it can unload and disable LaunchD jobs prior to removal or quarantine to hopefully avoid requiring a reboot.
+It can delete nefarious files (```-r/--remove```), or move them to a quarantine folder at ```/Library/Application Support/SavingThrow/<datetime>/``` (```-q/--quarantine```). Further, it will unload and disable LaunchD jobs prior to removal or quarantine to hopefully avoid requiring a reboot.
 
 Adware Definition Files
 =================

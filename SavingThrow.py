@@ -77,6 +77,8 @@ def build_argparser():
                         help="Print to stdout as well as syslog.")
     mode_parser = parser.add_mutually_exclusive_group()
     mode_parser.add_argument(
+        "-s", "--stdout", help="Print standard report.", action='store_true')
+    mode_parser.add_argument(
         "-r", "--remove", help="Remove offending files.", action='store_true')
     mode_parser.add_argument(
         "-q", "--quarantine", help="Move offending files to quarantine "
@@ -135,8 +137,15 @@ def load_malware_description_files(sources):
             malware_list = urllib2.urlopen(source).read()
 
             # Update our cached copy
-            with open(os.path.join(CACHE, os.path.basename(source)), 'w') as f:
-                f.write(malware_list)
+            try:
+                with open(os.path.join(CACHE, os.path.basename(source)), 'w') as f:
+                    f.write(malware_list)
+            except IOError as e:
+                if e[0] == 13:
+                    print("Please run as root!")
+                    sys.exit(13)
+                else:
+                    raise e
 
         except urllib2.URLError as e:
             # Use the cached copy if it exists.
@@ -183,6 +192,16 @@ def quarantine(files):
             logger.log("Failed to quarantine malware file:  %s, %s" %
                        (item, e))
 
+
+def report_to_stdout(files):
+    """Report back on identified files."""
+    result = 'Adware files found: %s\n' % len(files)
+    if files:
+        for item in enumerate(files):
+            result += "%d: %s\n" % item
+
+    logger.log(result)
+    print(result)
 
 def extension_attribute(files):
     """Report back on identified files in a Casper extension attribute
@@ -247,6 +266,8 @@ def main():
         remove(found_malware)
     elif args.quarantine:
         quarantine(found_malware)
+    elif args.stdout:
+        report_to_stdout(found_malware)
     else:
         extension_attribute(found_malware)
 
