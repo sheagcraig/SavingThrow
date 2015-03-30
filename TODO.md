@@ -1,5 +1,4 @@
 - Refactor to smaller units
-- Handle comments in malware file lists.
 - Add in manual prompting mode.
 - Start Changelog
 - Get extra files out of the Apple list...

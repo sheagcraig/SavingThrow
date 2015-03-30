@@ -45,7 +45,7 @@ NEFARIOUS_FILE_SOURCES = []
 # Files to look for may include globbing characters.
 # Default is to at least use Apple's files from:
 # https://support.apple.com/en-us/ht203987
-NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/5c76604f823d45792952/raw/8e8eaa9f69905265912ccc615949505558ff40f6/AppleAdwareList')
+NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/5c76604f823d45792952/raw/')
 
 CACHE = '/Library/Application Support/SavingThrow'
 if not os.path.exists(CACHE):
@@ -147,11 +147,17 @@ def load_adware_description_files(sources):
         try:
             logger.log("Attempting to update Adware list: %s" % source)
             adware_list = urllib2.urlopen(source).read()
+            cache_file = os.path.basename(source)
+            # Handle URLs which don't point at a specific file. e.g.
+            # Permalinked gists are a URL with a slash at the end.
+            if not cache_file:
+                # Remove the protocol and swap slashes to periods.
+                cache_file = source.split("//")[1].replace("/", ".")
+            cache_path = os.path.join(CACHE, cache_file)
 
             # Update our cached copy.
             try:
-                with open(os.path.join(CACHE, os.path.basename(source)), 'w') \
-                    as f:
+                with open(cache_file, 'w') as f:
                     f.write(adware_list)
             except IOError as e:
                 if e[0] == 13:
@@ -165,14 +171,15 @@ def load_adware_description_files(sources):
             logger.log("Update failed: %s. Looking for cached copy" %
                        e.message)
             try:
-                with open(os.path.join(CACHE, os.path.basename(source)), 'r') \
-                    as f:
+                with open(cache_file, 'r') as f:
                     adware_list = f.read()
             except IOError as e:
                 logger.log("Error: No cached copy of %s or other error %s" %
                       (source, e.message))
 
-        known_adware.update({file for file in adware_list.split('\n')})
+        known_adware.update({file.strip() for file in adware_list.splitlines()
+                             if not file.startswith('#') and
+                             len(file.strip()) != 0})
 
     return known_adware
 
