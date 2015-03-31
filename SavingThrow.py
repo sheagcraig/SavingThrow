@@ -46,6 +46,8 @@ NEFARIOUS_FILE_SOURCES = []
 # Default is to at least use Apple's files from:
 # https://support.apple.com/en-us/ht203987
 NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/5c76604f823d45792952/raw/AppleAdwareList')
+#DEBUG
+NEFARIOUS_FILE_SOURCES.append('https://gist.github.com/sheagcraig/13850488350aef95c828/raw/TestFilesList')
 
 CACHE = '/Library/Application Support/SavingThrow'
 if not os.path.exists(CACHE):
@@ -135,15 +137,14 @@ def get_projectX_files():
     return result
 
 
-def get_adware_description_file(source):
+def get_adware_description(source):
     """Given a URL to an adware description file, attempt to
-    download, parse, and generate set of targeted files and processes.
+    download, parse, and generate a set of targeted files and processes.
 
     """
-    known_adware = set()
     try:
         logger.log("Attempting to update Adware list: %s" % source)
-        adware_list = urllib2.urlopen(source).read()
+        adware_text = urllib2.urlopen(source).read()
         cache_file = os.path.basename(source)
         # Handle URLs which don't point at a specific file. e.g.
         # Permalinked gists can be referenced with a directory URL.
@@ -156,7 +157,7 @@ def get_adware_description_file(source):
         # Update our cached copy.
         try:
             with open(cache_path, 'w') as f:
-                f.write(adware_list)
+                f.write(adware_text)
         except IOError as e:
             if e[0] == 13:
                 print("Please run as root!")
@@ -170,16 +171,18 @@ def get_adware_description_file(source):
                     e.message)
         try:
             with open(cache_path, 'r') as f:
-                adware_list = f.read()
+                adware_text = f.read()
         except IOError as e:
             logger.log("Error: No cached copy of %s or other error %s" %
                     (source, e.message))
 
-    known_adware.update({file.strip() for file in adware_list.splitlines()
-                            if not file.startswith('#') and
-                            len(file.strip()) != 0})
+    adware_list = {item.strip() for item in adware_text.splitlines() if not
+                    item.startswith('#') and len(item.strip()) != 0}
+    known_adware = {file for file in adware_list if file.startswith('/')}
+    processes = {item.split(":")[1].strip() for item in adware_list if
+                 item.startswith('PROCESS:')}
 
-    return known_adware
+    return (known_adware, processes)
 
 
 def remove(files):
@@ -287,6 +290,33 @@ def unload_and_disable_launchd_jobs(files):
             logger.log(e)
 
 
+def kill(processes):
+    """Given a list of running process ids, try to kill them."""
+    for process_id in processes:
+        try:
+            result = subprocess.check_call(['kill', process_id])
+            logger.log("Killed process ID: %s" % process_id)
+        except subprocess.CalledProcessError:
+            logger.log("Failed to kill process ID: %s" % process_id)
+
+
+def get_running_process_IDs(processes):
+    """Given a list of process names, return a list of process ID's with
+    that name currently running.
+
+    """
+    running_process_ids = []
+    for process in processes:
+        safe_process = '^%s$' % re.escape(process)
+        try:
+            pids = subprocess.check_output(['pgrep', safe_process]).splitlines()
+            running_process_ids.extend(pids)
+        except subprocess.CalledProcessError:
+            # No results
+            pass
+    return running_process_ids
+
+
 def main():
     """Manage arguments and coordinate our saving throw."""
     # Handle command line arguments.
@@ -297,9 +327,11 @@ def main():
         logger.verbose = True
 
     known_adware = set()
+    processes = set()
     for source in NEFARIOUS_FILE_SOURCES:
-        known_adware.update(get_adware_description_file(source))
-    known_adware.add('/tmp/taco')
+        adware_files, adware_processes = get_adware_description(source)
+        known_adware.update(adware_files)
+        processes.update(adware_processes)
 
     # Look for projectX files.
     known_adware.update(get_projectX_files())
@@ -308,12 +340,17 @@ def main():
     found_adware = {match for filename in known_adware for match in
                     glob.glob(filename)}
 
+    # Build a set of pids we need to kill.
+    found_processes = get_running_process_IDs(processes)
+
     # Which action should we perform? An EA has no arguments, so make
     # it the default.
     if args.remove:
         remove(found_adware)
+        kill(found_processes)
     elif args.quarantine:
         quarantine(found_adware)
+        kill(found_processes)
     elif args.stdout:
         report_to_stdout(found_adware)
     else:

@@ -16,3 +16,10 @@
 - Which reminds me-probably makes sense to limit regex search on LaunchD jobs files to the ProgramArguments rather than the entire file.
 - Add better caching (don't download if not needed)
 - Add XML ADF format.
+- Add Safari extension handling:
+	- Amazon Shopping Assistant by Spigot Inc.
+	- Ebay Shopping Assistant by Spigot Inc.
+	- Searchme by Spigot, Inc.
+	- Slick Savings by Spigot Inc.
+	- GoPhoto.It
+	- Omnibar
