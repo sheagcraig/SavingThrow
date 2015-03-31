@@ -191,9 +191,9 @@ def remove(files):
                 shutil.rmtree(item)
             elif os.path.isfile(item):
                 os.remove(item)
-            logger.log("Removed adware file:  %s" % item)
+            logger.log("Removed adware file(s):  %s" % item)
         except OSError as e:
-            logger.log("Failed to remove adware file:  %s, %s" % (item, e))
+            logger.log("Failed to remove adware file(s):  %s, %s" % (item, e))
 
 
 def quarantine(files):
@@ -214,9 +214,9 @@ def quarantine(files):
         for item in files:
             try:
                 shutil.move(item, backup_dir)
-                logger.log("Quarantined adware file:  %s" % item)
+                logger.log("Quarantined adware file(s):  %s" % item)
             except OSError as e:
-                logger.log("Failed to quarantine adware file:  %s, %s" %
+                logger.log("Failed to quarantine adware file(s):  %s, %s" %
                         (item, e))
 
         zpath = os.path.join(quarantine_dir, "%s-Quarantine.zip" % timestamp)
