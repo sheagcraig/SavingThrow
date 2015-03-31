@@ -135,53 +135,49 @@ def get_projectX_files():
     return result
 
 
-def load_adware_description_files(sources):
-    """Given a list of URLs to adware description files, attempt to
-    download, parse, and generate a master set of targeted files.
-
-    Returns a set of nefarious files.
+def get_adware_description_file(source):
+    """Given a URL to an adware description file, attempt to
+    download, parse, and generate set of targeted files and processes.
 
     """
     known_adware = set()
-    for source in sources:
+    try:
+        logger.log("Attempting to update Adware list: %s" % source)
+        adware_list = urllib2.urlopen(source).read()
+        cache_file = os.path.basename(source)
+        # Handle URLs which don't point at a specific file. e.g.
+        # Permalinked gists can be referenced with a directory URL.
+        if not cache_file:
+            # Remove the protocol and swap slashes to periods.
+            # Drop the final slash (period).
+            cache_file = source.split("//")[1].replace("/", ".")[:-1]
+        cache_path = os.path.join(CACHE, cache_file)
+
+        # Update our cached copy.
         try:
-            logger.log("Attempting to update Adware list: %s" % source)
-            adware_list = urllib2.urlopen(source).read()
-            cache_file = os.path.basename(source)
-            # Handle URLs which don't point at a specific file. e.g.
-            # Permalinked gists are a URL with a slash at the end.
-            if not cache_file:
-                # Remove the protocol and swap slashes to periods.
-                # Drop the final slash (period).
-                cache_file = source.split("//")[1].replace("/", ".")[:-1]
-            cache_path = os.path.join(CACHE, cache_file)
-            print(cache_path)
+            with open(cache_path, 'w') as f:
+                f.write(adware_list)
+        except IOError as e:
+            if e[0] == 13:
+                print("Please run as root!")
+                sys.exit(13)
+            else:
+                raise e
 
-            # Update our cached copy.
-            try:
-                with open(cache_path, 'w') as f:
-                    f.write(adware_list)
-            except IOError as e:
-                if e[0] == 13:
-                    print("Please run as root!")
-                    sys.exit(13)
-                else:
-                    raise e
+    except urllib2.URLError as e:
+        # Use the cached copy if it exists.
+        logger.log("Update failed: %s. Looking for cached copy" %
+                    e.message)
+        try:
+            with open(cache_path, 'r') as f:
+                adware_list = f.read()
+        except IOError as e:
+            logger.log("Error: No cached copy of %s or other error %s" %
+                    (source, e.message))
 
-        except urllib2.URLError as e:
-            # Use the cached copy if it exists.
-            logger.log("Update failed: %s. Looking for cached copy" %
-                       e.message)
-            try:
-                with open(cache_path, 'r') as f:
-                    adware_list = f.read()
-            except IOError as e:
-                logger.log("Error: No cached copy of %s or other error %s" %
-                      (source, e.message))
-
-        known_adware.update({file.strip() for file in adware_list.splitlines()
-                             if not file.startswith('#') and
-                             len(file.strip()) != 0})
+    known_adware.update({file.strip() for file in adware_list.splitlines()
+                            if not file.startswith('#') and
+                            len(file.strip()) != 0})
 
     return known_adware
 
@@ -301,8 +297,8 @@ def main():
         logger.verbose = True
 
     known_adware = set()
-    known_adware.update(load_adware_description_files(
-        NEFARIOUS_FILE_SOURCES))
+    for source in NEFARIOUS_FILE_SOURCES:
+        known_adware.update(get_adware_description_file(source))
     known_adware.add('/tmp/taco')
 
     # Look for projectX files.
