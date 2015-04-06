@@ -237,7 +237,7 @@ def report_to_stdout(files):
     """Report back on identified files."""
     result = 'Adware files found: %s\n' % len(files)
     if files:
-        for item in enumerate(files):
+        for item in enumerate(files, 1):
             result += "%d: %s\n" % item
 
     logger.vlog(result)
@@ -251,7 +251,7 @@ def extension_attribute(files):
     result = '<result>'
     if files:
         result += 'True\n'
-        for item in enumerate(files):
+        for item in enumerate(files, 1):
             result += "%d: %s\n" % item
     else:
         result += 'False'
