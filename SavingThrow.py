@@ -36,7 +36,7 @@ import zipfile
 import zlib
 
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 
 # Add any URL's to nefarious file lists here:
@@ -283,11 +283,20 @@ def unload_and_disable_launchd_jobs(files):
 
     # Attempt to unload and disable these files.
     for file in launchd_config_files:
+        logger.log('Unloading %s' % file)
+        result = ''
         try:
-            subprocess.check_call(['launchctl', 'unload', '-w', file])
+            # Toss out any stderr messages about things not being
+            # loaded. We just want them off; don't care if they're
+            # not running to begin with.
+            result = subprocess.check_output(['launchctl', 'unload', '-w',
+                                              file], stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             # Job may not be loaded, so just log and move on.
-            logger.log(e)
+            result = e.message
+        finally:
+            if result:
+                logger.log('Launchctl response: %s' % result)
 
 
 def kill(processes):
