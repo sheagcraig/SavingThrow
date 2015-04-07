@@ -92,17 +92,18 @@ class AdwareController():
         and add to internal adwares list.
 
         """
+        cache_file = os.path.basename(source)
+        # Handle URLs which don't point at a specific file. e.g.
+        # Permalinked gists can be referenced with a directory URL.
+        if not cache_file:
+            # Remove the protocol and swap slashes to periods.
+            # Drop the final slash (period).
+            cache_file = source.split("//")[1].replace("/", ".")[:-1]
+        cache_path = os.path.join(CACHE, cache_file)
+
         try:
             logger.log("Attempting to update Adware list: %s" % source)
             adware_text = urllib2.urlopen(source).read()
-            cache_file = os.path.basename(source)
-            # Handle URLs which don't point at a specific file. e.g.
-            # Permalinked gists can be referenced with a directory URL.
-            if not cache_file:
-                # Remove the protocol and swap slashes to periods.
-                # Drop the final slash (period).
-                cache_file = source.split("//")[1].replace("/", ".")[:-1]
-            cache_path = os.path.join(CACHE, cache_file)
 
             # Update our cached copy.
             try:
@@ -129,16 +130,6 @@ class AdwareController():
         self.adwares.extend(
             [Adware(adware) for adware in
              ElementTree.fromstring(adware_text).findall('Adware')])
-
-    def remove(self):
-        """Call remove on each adware."""
-        for adware in self.adwares:
-            adware.remove()
-
-    def quarantine(self):
-        """Call quarantine on each adware."""
-        for adware in self.adwares:
-            adware.quarantine()
 
     def report_string(self):
         """Return a nicely formatted string representation of
@@ -184,6 +175,103 @@ class AdwareController():
 
         result += '</result>'
         logger.vlog(result)
+
+    def remove(self):
+        """Delete identified files and directories."""
+        files = [file for adware in self.adwares for file in adware.found]
+        self.unload_and_disable_launchd_jobs(files)
+        for item in files:
+            try:
+                if os.path.isdir(item):
+                    shutil.rmtree(item)
+                elif os.path.isfile(item):
+                    os.remove(item)
+                logger.log("Removed adware file(s):  %s" % item)
+            except OSError as e:
+                logger.log("Failed to remove adware file(s):  %s, %s" % (item, e))
+
+    def quarantine(self):
+        """Move all identified files to a timestamped folder in our cache.
+
+        """
+        files = [file for adware in self.adwares for file in adware.found]
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        # Let's not bother if the list is empty.
+        if files:
+            quarantine_dir = os.path.join(CACHE, 'Quarantine')
+            if not os.path.exists(quarantine_dir):
+                os.mkdir(quarantine_dir)
+            backup_dir = os.path.join(quarantine_dir, timestamp)
+            os.mkdir(backup_dir)
+
+            self.unload_and_disable_launchd_jobs(files)
+
+            for item in files:
+                try:
+                    shutil.move(item, backup_dir)
+                    logger.log("Quarantined adware file(s):  %s" % item)
+                except OSError as e:
+                    logger.log("Failed to quarantine adware file(s):  %s, %s" %
+                            (item, e))
+
+            zpath = os.path.join(quarantine_dir, "%s-Quarantine.zip" %
+                                 timestamp)
+            with zipfile.ZipFile(zpath, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                os.chdir(backup_dir)
+                for item in files:
+                    zipf.write(os.path.basename(item))
+
+            logger.log("Zipped quarantined files to:  %s" % zpath)
+
+            shutil.rmtree(backup_dir)
+
+    def unload_and_disable_launchd_jobs(self, files):
+        """Given an iterable of paths, attempt to unload and disable any
+        launchd configuration files.
+
+        """
+        # Find system-level LaunchD config files.
+        conf_locs = {'/Library/LaunchAgents',
+                    '/Library/LaunchDaemons',
+                    '/System/Library/LaunchAgents',
+                    '/System/Library/LaunchDaemons'}
+
+        # Add valid per-user config locations.
+        for user_home in os.listdir('/Users'):
+            candidate_launchd_loc = os.path.join('/Users', user_home,
+                                                'Library/LaunchAgents')
+            if os.path.exists(candidate_launchd_loc):
+                conf_locs.add(candidate_launchd_loc)
+        launchd_config_files = {file for file in files for conf_loc in
+                                conf_locs if file.find(conf_loc) == 0}
+
+        # Attempt to unload and disable these files.
+        for file in launchd_config_files:
+            logger.log('Unloading %s' % file)
+            result = ''
+            try:
+                # Toss out any stderr messages about things not being
+                # loaded. We just want them off; don't care if they're
+                # not running to begin with.
+                result = subprocess.check_output(['launchctl', 'unload', '-w',
+                                                  file],
+                                                 stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as e:
+                # Job may not be loaded, so just log and move on.
+                result = e.message
+            finally:
+                if result:
+                    logger.log('Launchctl response: %s' % result)
+
+    def kill(self):
+        """Given a list of running process ids, try to kill them."""
+        for process_id in [pid for adware in self.adwares for processes in
+                           adware.processes for pid in processes]:
+            try:
+                result = subprocess.check_call(['kill', process_id])
+                logger.log("Killed process ID: %s" % process_id)
+            except subprocess.CalledProcessError:
+                logger.log("Failed to kill process ID: %s" % process_id)
 
 
 class Adware():
@@ -294,120 +382,6 @@ def build_argparser():
     return parser
 
 
-
-def remove(files):
-    """Delete identified files and directories."""
-    unload_and_disable_launchd_jobs(files)
-    for item in files:
-        try:
-            if os.path.isdir(item):
-                shutil.rmtree(item)
-            elif os.path.isfile(item):
-                os.remove(item)
-            logger.log("Removed adware file(s):  %s" % item)
-        except OSError as e:
-            logger.log("Failed to remove adware file(s):  %s, %s" % (item, e))
-
-
-def quarantine(files):
-    """Move all identified files to a timestamped folder in our cache.
-
-    """
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    # Let's not bother if the list is empty.
-    if files:
-        quarantine_dir = os.path.join(CACHE, 'Quarantine')
-        if not os.path.exists(quarantine_dir):
-            os.mkdir(quarantine_dir)
-        backup_dir = os.path.join(quarantine_dir, timestamp)
-        os.mkdir(backup_dir)
-
-        unload_and_disable_launchd_jobs(files)
-
-        for item in files:
-            try:
-                shutil.move(item, backup_dir)
-                logger.log("Quarantined adware file(s):  %s" % item)
-            except OSError as e:
-                logger.log("Failed to quarantine adware file(s):  %s, %s" %
-                        (item, e))
-
-        zpath = os.path.join(quarantine_dir, "%s-Quarantine.zip" % timestamp)
-        with zipfile.ZipFile(zpath, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            os.chdir(backup_dir)
-            for item in files:
-                zipf.write(os.path.basename(item))
-
-        logger.log("Zipped quarantined files to:  %s" % zpath)
-
-        shutil.rmtree(backup_dir)
-
-
-def unload_and_disable_launchd_jobs(files):
-    """Given an iterable of paths, attempt to unload and disable any
-    launchd configuration files.
-
-    """
-    # Find system-level LaunchD config files.
-    conf_locs = {'/Library/LaunchAgents',
-                 '/Library/LaunchDaemons',
-                 '/System/Library/LaunchAgents',
-                 '/System/Library/LaunchDaemons'}
-
-    # Add valid per-user config locations.
-    for user_home in os.listdir('/Users'):
-        candidate_launchd_loc = os.path.join('/Users', user_home,
-                                             'Library/LaunchAgents')
-        if os.path.exists(candidate_launchd_loc):
-            conf_locs.add(candidate_launchd_loc)
-    launchd_config_files = {file for file in files for conf_loc in conf_locs if
-                            file.find(conf_loc) == 0}
-
-    # Attempt to unload and disable these files.
-    for file in launchd_config_files:
-        logger.log('Unloading %s' % file)
-        result = ''
-        try:
-            # Toss out any stderr messages about things not being
-            # loaded. We just want them off; don't care if they're
-            # not running to begin with.
-            result = subprocess.check_output(['launchctl', 'unload', '-w',
-                                              file], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            # Job may not be loaded, so just log and move on.
-            result = e.message
-        finally:
-            if result:
-                logger.log('Launchctl response: %s' % result)
-
-
-def kill(processes):
-    """Given a list of running process ids, try to kill them."""
-    for process_id in processes:
-        try:
-            result = subprocess.check_call(['kill', process_id])
-            logger.log("Killed process ID: %s" % process_id)
-        except subprocess.CalledProcessError:
-            logger.log("Failed to kill process ID: %s" % process_id)
-
-
-def get_running_process_IDs(processes):
-    """Given a list of process names, return a list of process ID's with
-    that name currently running.
-
-    """
-    running_process_ids = []
-    for process in processes:
-        safe_process = '^%s$' % re.escape(process)
-        try:
-            pids = subprocess.check_output(['pgrep', safe_process]).splitlines()
-            running_process_ids.extend(pids)
-        except subprocess.CalledProcessError:
-            # No results
-            pass
-    return running_process_ids
-
-
 def main():
     """Manage arguments and coordinate our saving throw."""
     # Handle command line arguments.
@@ -424,15 +398,11 @@ def main():
     # Which action should we perform? An EA has no arguments, so make
     # it the default.
     if args.remove:
-        pass
-        # TODO
-        #remove(found_adware)
-        #kill(found_processes)
+        controller.remove()
+        controller.kill()
     elif args.quarantine:
-        # TODO
-        pass
-        #quarantine(found_adware)
-        #kill(found_processes)
+        controller.quarantine()
+        controller.kill()
     elif args.stdout:
         controller.report_to_stdout()
     else:
