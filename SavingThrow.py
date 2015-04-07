@@ -96,13 +96,50 @@ class AdwareController():
         for adware in self.adwares:
             adware.quarantine()
 
-    def report(self):
+    def report_string(self):
+        """Return a nicely formatted string representation of
+        findings.
+
+        """
+        result = ''
         for adware in self.adwares:
-            print("Name: %s" % adware.name)
-            print("Adware files found:")
-            for num, found in enumerate(adware.found, 1):
-                print("%s: %s" % (num, found))
-            print("Adware processes running: %s" % adware.processes)
+            if adware.found or adware.processes:
+                result += "Name: %s\n" % adware.name
+                for num, found in enumerate(
+                    adware.found, 1):
+                    result += "File %s: %s\n" % (num, found)
+                for num, found in enumerate(
+                    adware.processes.items(), 1):
+                        pids_string = ', '.join((str(pid) for pid in found[1]))
+                        result += "Process %s: %s PID: %s\n" % (
+                            num, found[0], pids_string)
+
+        return result
+
+    def report_to_stdout(self):
+        """Report back on identified files."""
+        report_string = self.report_string()
+        if report_string:
+            result = 'Adware files and processes found:\n%s' % report_string
+        else:
+            result = 'No adware files or processes found.'
+
+        logger.vlog(result)
+
+    def extension_attribute(self):
+        """Report back on identified files in a Casper extension attribute
+        format.
+
+        """
+        result = '<result>'
+        report_string = self.report_string()
+        if report_string:
+            result += 'True\n%s' % report_string
+        else:
+            result += 'False'
+
+        result += '</result>'
+        logger.vlog(result)
 
 
 class Adware():
@@ -118,7 +155,7 @@ class Adware():
         self.xml = xml
         self.env = {}
         self.found = set()
-        self.processes = set()
+        self.processes = {}
         self.name = self.xml.findtext('AdwareName')
 
         self.find()
@@ -165,10 +202,6 @@ class Adware():
                    os.listdir(os.path.dirname(match))}
         self.found.update(matches)
 
-        #DEBUG
-        #print("Candidates: %s" % candidates)
-        print("Matches: %s" % matches)
-
         # Build a set of processes to look for.
         process_candidates = {process.text for process in
                               self.xml.findall('Process')}
@@ -178,17 +211,17 @@ class Adware():
 
     def get_running_process_IDs(self, processes):
         """Given a list of process names, get running process ID's"""
-        running_process_ids = []
+        running_process_ids = {}
         for process in processes:
             safe_process = '^%s$' % re.escape(process)
             try:
                 pids = subprocess.check_output(['pgrep',
                                                 safe_process]).splitlines()
-                running_process_ids.extend(pids)
+                running_process_ids[process] = pids
             except subprocess.CalledProcessError:
                 # No results
                 pass
-        self.processes = set(running_process_ids)
+        self.processes = running_process_ids
 
 
 def build_argparser():
@@ -394,34 +427,6 @@ def quarantine(files):
         shutil.rmtree(backup_dir)
 
 
-def report_to_stdout(files):
-    """Report back on identified files."""
-    result = 'Adware files found: %s\n' % len(files)
-    if files:
-        for item in enumerate(files, 1):
-            result += "%d: %s\n" % item
-
-    logger.vlog(result)
-
-
-def extension_attribute(files):
-    """Report back on identified files in a Casper extension attribute
-    format.
-
-    """
-    result = '<result>'
-    if files:
-        result += 'True\n'
-        for item in enumerate(files, 1):
-            result += "%d: %s\n" % item
-    else:
-        result += 'False'
-
-    result += '</result>'
-
-    logger.vlog(result)
-
-
 def unload_and_disable_launchd_jobs(files):
     """Given an iterable of paths, attempt to unload and disable any
     launchd configuration files.
@@ -508,9 +513,6 @@ def main():
                    get_XML_adware_description(source)]
         controller.adwares.extend(adwares)
 
-    #for child in controller.adwares[0].xml.getchildren():
-    #    print(child.text)
-    controller.report()
 
     ## Look for projectX files.
     #known_adware.update(get_projectX_files())
@@ -522,18 +524,18 @@ def main():
     ## Build a set of pids we need to kill.
     #found_processes = get_running_process_IDs(processes)
 
-    ## Which action should we perform? An EA has no arguments, so make
-    ## it the default.
-    #if args.remove:
-    #    remove(found_adware)
-    #    kill(found_processes)
-    #elif args.quarantine:
-    #    quarantine(found_adware)
-    #    kill(found_processes)
-    #elif args.stdout:
-    #    report_to_stdout(found_adware)
-    #else:
-    #    extension_attribute(found_adware)
+    # Which action should we perform? An EA has no arguments, so make
+    # it the default.
+    if args.remove:
+        remove(found_adware)
+        kill(found_processes)
+    elif args.quarantine:
+        quarantine(found_adware)
+        kill(found_processes)
+    elif args.stdout:
+        controller.report_to_stdout()
+    else:
+        controller.extension_attribute()
 
 
 if __name__ == '__main__':
