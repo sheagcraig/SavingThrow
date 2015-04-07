@@ -29,7 +29,7 @@ If interest exists for a configuration plist, that would be simple to implement,
 
 Adware Definition Files
 =======================
-Adware is defined in an XML formatted *Adware Definition File*. This section describes the ADF format and structure, as well as makes suggestions about some of the more complicated types.
+Adware is defined in an XML formatted *Adware Definition File*. This section describes the ADF format and structure, as well as makes suggestions about some of the more complicated types. To see an example ADF that incorporates most of these features, look no further than the [default ADF]()
 
 In most cases, each adware "product" should be defined in its own file, although in some cases, grouping of adware products may make more sense. The ADF format allows an arbitrary number of Adware elements in one ADF file, should this be the case.
 
@@ -42,6 +42,7 @@ The top-level tag should be ```<AdwareDefinition>```, followed by metadata tags 
 
 ### Adware Elements
 Each adware "product" should be wrapped in an ```<Adware>``` tag.
+Under this, consider including an ```<AdwareName>```, which will get prefaced to any reports.
 
 If at all possible, include a source for downloading the adware so interested or OCD admins can test or verify the contents of the definition. Provide as many URLs as needed, each wrapped in ```<AdwareSource>``` tags.
 
