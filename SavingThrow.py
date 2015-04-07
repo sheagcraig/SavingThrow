@@ -99,7 +99,9 @@ class AdwareController():
     def report(self):
         for adware in self.adwares:
             print("Name: %s" % adware.name)
-            print("Adware files found: %s" % adware.found)
+            print("Adware files found:")
+            for num, found in enumerate(adware.found, 1):
+                print("%s: %s" % (num, found))
             print("Adware processes running: %s" % adware.processes)
 
 
@@ -131,7 +133,7 @@ class Adware():
         # First look for regex-confirmed files to prepare for text
         # replacement.
         files_to_test = self.xml.findall('TestedFile')
-        for tested_file in  files_to_test:
+        for tested_file in files_to_test:
             regex = re.compile(tested_file.findtext('Regex'))
             replacement_key = tested_file.findtext('ReplacementKey')
             fnames = glob.glob(tested_file.findtext('Filename'))
@@ -156,9 +158,16 @@ class Adware():
             candidates.add(std_file.text)
 
         # Find files on the drive.
+        # OS X is case insensitive, so we have to test to avoid
+        # including duplicates in the case *sensitive* set.
         matches = {match for filename in candidates for match in
-                   glob.glob(filename)}
+                   glob.glob(filename) if os.path.basename(match) in
+                   os.listdir(os.path.dirname(match))}
         self.found.update(matches)
+
+        #DEBUG
+        #print("Candidates: %s" % candidates)
+        print("Matches: %s" % matches)
 
         # Build a set of processes to look for.
         process_candidates = {process.text for process in
