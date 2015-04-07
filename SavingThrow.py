@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Import ALL the modules!
 import argparse
+from xml.etree import ElementTree
 import glob
 import os
 import re
@@ -45,9 +46,10 @@ NEFARIOUS_FILE_SOURCES = []
 # Files to look for may include globbing characters.
 # Default is to at least use Apple's files from:
 # https://support.apple.com/en-us/ht203987
-NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/5c76604f823d45792952/raw/AppleAdwareList')
+#NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/5c76604f823d45792952/raw/AppleAdwareList')
+NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/86c2cda271cb16736987/raw/TestXML.adf')
 #DEBUG
-NEFARIOUS_FILE_SOURCES.append('https://gist.github.com/sheagcraig/13850488350aef95c828/raw/TestFilesList')
+#NEFARIOUS_FILE_SOURCES.append('https://gist.github.com/sheagcraig/13850488350aef95c828/raw/TestFilesList')
 
 CACHE = '/Library/Application Support/SavingThrow'
 if not os.path.exists(CACHE):
@@ -73,6 +75,110 @@ class Logger():
 
 # Make our global logger.
 logger = Logger()
+
+
+class AdwareController():
+    """Manages a group of Adware objects."""
+    def __init__(self, adwares=[]):
+        """Create a controller, optionally populating the list of
+        adwares.
+
+        """
+        self.adwares = adwares
+
+    def remove(self):
+        """Call remove on each adware."""
+        for adware in self.adwares:
+            adware.remove()
+
+    def quarantine(self):
+        """Call quarantine on each adware."""
+        for adware in self.adwares:
+            adware.quarantine()
+
+    def report(self):
+        for adware in self.adwares:
+            print("Name: %s" % adware.name)
+            print("Adware files found: %s" % adware.found)
+            print("Adware processes running: %s" % adware.processes)
+
+
+class Adware():
+    """Represents one adware 'product', as defined in an Adware
+    Definition File (ADF).
+
+    """
+    def __init__(self, xml):
+        """Given an Element describing an Adware, setup, and find
+        adware files.
+
+        """
+        self.xml = xml
+        self.env = {}
+        self.found = set()
+        self.processes = set()
+        self.name = self.xml.findtext('adware_name')
+
+        self.find()
+
+    def find(self):
+        """Identify files on the system that correspond to this
+        Adware.
+
+        """
+        candidates = set()
+        process_candidates = set()
+        # First look for regex-confirmed files to prepare for text
+        # replacement.
+        files_to_test = self.xml.findall('tested_file')
+        for tested_file in  files_to_test:
+            regex = re.compile(tested_file.findtext('regex'))
+            replacement_key = tested_file.findtext('replacement_key')
+            fnames = glob.glob(tested_file.findtext('filename'))
+            for fname in fnames:
+                with open(fname, 'r') as f:
+                    text = f.read()
+
+                if re.search(regex, text):
+                    candidates.add(fname)
+
+                    if replacement_key:
+                        self.env[replacement_key] = re.search(regex,
+                                                              text).group(1)
+
+        # Now look for regular files.
+        for std_file in self.xml.findall('file'):
+            # Perform text replacments
+            if "%" in std_file.text:
+                for key, value in self.env.items():
+                    std_file.text = std_file.text.replace(
+                        "%%%s%%" % key, value)
+            candidates.add(std_file.text)
+
+        # Find files on the drive.
+        matches = {match for filename in candidates for match in
+                   glob.glob(filename)}
+        self.found.update(matches)
+
+        # Build a set of processes to look for.
+        process_candidates = {process.text for process in
+                              self.xml.findall('process')}
+
+        # Find running processes.
+        self.get_running_process_IDs(process_candidates)
+
+    def get_running_process_IDs(self, processes):
+        """Given a list of process names, get running process ID's"""
+        running_process_ids = []
+        for process in processes:
+            safe_process = '^%s$' % re.escape(process)
+            try:
+                pids = subprocess.check_output(['pgrep', safe_process]).splitlines()
+                running_process_ids.extend(pids)
+            except subprocess.CalledProcessError:
+                # No results
+                pass
+        self.processes = set(running_process_ids)
 
 
 def build_argparser():
@@ -176,6 +282,7 @@ def get_adware_description(source):
             logger.log("Error: No cached copy of %s or other error %s" %
                     (source, e.message))
 
+    # Legacy file format handler
     adware_list = {item.strip() for item in adware_text.splitlines() if not
                     item.startswith('#') and len(item.strip()) != 0}
     known_adware = {file for file in adware_list if file.startswith('/')}
@@ -183,6 +290,48 @@ def get_adware_description(source):
                  item.startswith('PROCESS:')}
 
     return (known_adware, processes)
+
+
+def get_XML_adware_description(source):
+    """Given a URL to an adware description file, attempt to
+    download, parse, and generate a set of targeted files and processes.
+
+    """
+    try:
+        logger.log("Attempting to update Adware list: %s" % source)
+        adware_text = urllib2.urlopen(source).read()
+        cache_file = os.path.basename(source)
+        # Handle URLs which don't point at a specific file. e.g.
+        # Permalinked gists can be referenced with a directory URL.
+        if not cache_file:
+            # Remove the protocol and swap slashes to periods.
+            # Drop the final slash (period).
+            cache_file = source.split("//")[1].replace("/", ".")[:-1]
+        cache_path = os.path.join(CACHE, cache_file)
+
+        # Update our cached copy.
+        try:
+            with open(cache_path, 'w') as f:
+                f.write(adware_text)
+        except IOError as e:
+            if e[0] == 13:
+                print("Please run as root!")
+                sys.exit(13)
+            else:
+                raise e
+
+    except urllib2.URLError as e:
+        # Use the cached copy if it exists.
+        logger.log("Update failed: %s. Looking for cached copy" %
+                    e.message)
+        try:
+            with open(cache_path, 'r') as f:
+                adware_text = f.read()
+        except IOError as e:
+            logger.log("Error: No cached copy of %s or other error %s" %
+                    (source, e.message))
+
+    return ElementTree.fromstring(adware_text)
 
 
 def remove(files):
@@ -337,33 +486,41 @@ def main():
 
     known_adware = set()
     processes = set()
+    #for source in NEFARIOUS_FILE_SOURCES:
+    #    adware_files, adware_processes = get_adware_description(source)
+    #    known_adware.update(adware_files)
+    #    processes.update(adware_processes)
+    controller = AdwareController()
     for source in NEFARIOUS_FILE_SOURCES:
-        adware_files, adware_processes = get_adware_description(source)
-        known_adware.update(adware_files)
-        processes.update(adware_processes)
+        adware = Adware(get_XML_adware_description(source))
+        controller.adwares.append(adware)
 
-    # Look for projectX files.
-    known_adware.update(get_projectX_files())
+    #for child in controller.adwares[0].xml.getchildren():
+    #    print(child.text)
+    controller.report()
 
-    # Build a set of adware files that are on the drive.
-    found_adware = {match for filename in known_adware for match in
-                    glob.glob(filename)}
+    ## Look for projectX files.
+    #known_adware.update(get_projectX_files())
 
-    # Build a set of pids we need to kill.
-    found_processes = get_running_process_IDs(processes)
+    ## Build a set of adware files that are on the drive.
+    #found_adware = {match for filename in known_adware for match in
+    #                glob.glob(filename)}
 
-    # Which action should we perform? An EA has no arguments, so make
-    # it the default.
-    if args.remove:
-        remove(found_adware)
-        kill(found_processes)
-    elif args.quarantine:
-        quarantine(found_adware)
-        kill(found_processes)
-    elif args.stdout:
-        report_to_stdout(found_adware)
-    else:
-        extension_attribute(found_adware)
+    ## Build a set of pids we need to kill.
+    #found_processes = get_running_process_IDs(processes)
+
+    ## Which action should we perform? An EA has no arguments, so make
+    ## it the default.
+    #if args.remove:
+    #    remove(found_adware)
+    #    kill(found_processes)
+    #elif args.quarantine:
+    #    quarantine(found_adware)
+    #    kill(found_processes)
+    #elif args.stdout:
+    #    report_to_stdout(found_adware)
+    #else:
+    #    extension_attribute(found_adware)
 
 
 if __name__ == '__main__':
