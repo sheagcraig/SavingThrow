@@ -265,10 +265,11 @@ class AdwareController():
 
     def kill(self):
         """Given a list of running process ids, try to kill them."""
-        for process_id in [pid for adware in self.adwares for processes in
-                           adware.processes for pid in processes]:
+        kill_list = [pid for adware in self.adwares for process in
+                     adware.processes.values() for pid in process]
+        for process_id in kill_list:
             try:
-                result = subprocess.check_call(['kill', process_id])
+                result = subprocess.check_call(['kill', str(process_id)])
                 logger.log("Killed process ID: %s" % process_id)
             except subprocess.CalledProcessError:
                 logger.log("Failed to kill process ID: %s" % process_id)
