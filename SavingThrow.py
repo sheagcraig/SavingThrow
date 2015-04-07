@@ -306,7 +306,7 @@ class Adware():
         for tested_file in files_to_test:
             regex = re.compile(tested_file.findtext('Regex'))
             replacement_key = tested_file.findtext('ReplacementKey')
-            fnames = glob.glob(tested_file.findtext('Filename'))
+            fnames = glob.glob(tested_file.findtext('File'))
             for fname in fnames:
                 with open(fname, 'r') as f:
                     text = f.read()
