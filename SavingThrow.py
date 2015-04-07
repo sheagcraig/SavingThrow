@@ -86,6 +86,50 @@ class AdwareController():
         """
         self.adwares = adwares
 
+    def add_adware_from_url(self, source):
+        """Given a URL to an adware description file, attempt to
+        download, parse, and generate a set of targeted files and processes,
+        and add to internal adwares list.
+
+        """
+        try:
+            logger.log("Attempting to update Adware list: %s" % source)
+            adware_text = urllib2.urlopen(source).read()
+            cache_file = os.path.basename(source)
+            # Handle URLs which don't point at a specific file. e.g.
+            # Permalinked gists can be referenced with a directory URL.
+            if not cache_file:
+                # Remove the protocol and swap slashes to periods.
+                # Drop the final slash (period).
+                cache_file = source.split("//")[1].replace("/", ".")[:-1]
+            cache_path = os.path.join(CACHE, cache_file)
+
+            # Update our cached copy.
+            try:
+                with open(cache_path, 'w') as f:
+                    f.write(adware_text)
+            except IOError as e:
+                if e[0] == 13:
+                    print("Please run as root!")
+                    sys.exit(13)
+                else:
+                    raise e
+
+        except urllib2.URLError as e:
+            # Use the cached copy if it exists.
+            logger.log("Update failed: %s. Looking for cached copy" %
+                        e.message)
+            try:
+                with open(cache_path, 'r') as f:
+                    adware_text = f.read()
+            except IOError as e:
+                logger.log("Error: No cached copy of %s or other error %s" %
+                        (source, e.message))
+
+        self.adwares.extend(
+            [Adware(adware) for adware in
+             ElementTree.fromstring(adware_text).findall('Adware')])
+
     def remove(self):
         """Call remove on each adware."""
         for adware in self.adwares:
@@ -250,49 +294,6 @@ def build_argparser():
     return parser
 
 
-def get_adware_description(source):
-    """Given a URL to an adware description file, attempt to
-    download, parse, and generate a set of targeted files and processes.
-
-    """
-    try:
-        logger.log("Attempting to update Adware list: %s" % source)
-        adware_text = urllib2.urlopen(source).read()
-        cache_file = os.path.basename(source)
-        # Handle URLs which don't point at a specific file. e.g.
-        # Permalinked gists can be referenced with a directory URL.
-        if not cache_file:
-            # Remove the protocol and swap slashes to periods.
-            # Drop the final slash (period).
-            cache_file = source.split("//")[1].replace("/", ".")[:-1]
-        cache_path = os.path.join(CACHE, cache_file)
-
-        # Update our cached copy.
-        try:
-            with open(cache_path, 'w') as f:
-                f.write(adware_text)
-        except IOError as e:
-            if e[0] == 13:
-                print("Please run as root!")
-                sys.exit(13)
-            else:
-                raise e
-
-    except urllib2.URLError as e:
-        # Use the cached copy if it exists.
-        logger.log("Update failed: %s. Looking for cached copy" %
-                    e.message)
-        try:
-            with open(cache_path, 'r') as f:
-                adware_text = f.read()
-        except IOError as e:
-            logger.log("Error: No cached copy of %s or other error %s" %
-                    (source, e.message))
-
-    adwares = [adware for adware in
-               ElementTree.fromstring(adware_text).findall('Adware')]
-    return adwares
-
 
 def remove(files):
     """Delete identified files and directories."""
@@ -418,18 +419,18 @@ def main():
 
     controller = AdwareController()
     for source in NEFARIOUS_FILE_SOURCES:
-        adwares = [Adware(description) for description in
-                   get_adware_description(source)]
-        controller.adwares.extend(adwares)
+        controller.add_adware_from_url(source)
 
     # Which action should we perform? An EA has no arguments, so make
     # it the default.
     if args.remove:
+        pass
         # TODO
         #remove(found_adware)
         #kill(found_processes)
     elif args.quarantine:
         # TODO
+        pass
         #quarantine(found_adware)
         #kill(found_processes)
     elif args.stdout:
