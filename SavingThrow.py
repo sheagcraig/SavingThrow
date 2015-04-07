@@ -117,7 +117,7 @@ class Adware():
         self.env = {}
         self.found = set()
         self.processes = set()
-        self.name = self.xml.findtext('adware_name')
+        self.name = self.xml.findtext('AdwareName')
 
         self.find()
 
@@ -130,11 +130,11 @@ class Adware():
         process_candidates = set()
         # First look for regex-confirmed files to prepare for text
         # replacement.
-        files_to_test = self.xml.findall('tested_file')
+        files_to_test = self.xml.findall('TestedFile')
         for tested_file in  files_to_test:
-            regex = re.compile(tested_file.findtext('regex'))
-            replacement_key = tested_file.findtext('replacement_key')
-            fnames = glob.glob(tested_file.findtext('filename'))
+            regex = re.compile(tested_file.findtext('Regex'))
+            replacement_key = tested_file.findtext('ReplacementKey')
+            fnames = glob.glob(tested_file.findtext('Filename'))
             for fname in fnames:
                 with open(fname, 'r') as f:
                     text = f.read()
@@ -147,7 +147,7 @@ class Adware():
                                                               text).group(1)
 
         # Now look for regular files.
-        for std_file in self.xml.findall('file'):
+        for std_file in self.xml.findall('File'):
             # Perform text replacments
             if "%" in std_file.text:
                 for key, value in self.env.items():
@@ -162,7 +162,7 @@ class Adware():
 
         # Build a set of processes to look for.
         process_candidates = {process.text for process in
-                              self.xml.findall('process')}
+                              self.xml.findall('Process')}
 
         # Find running processes.
         self.get_running_process_IDs(process_candidates)
@@ -173,7 +173,8 @@ class Adware():
         for process in processes:
             safe_process = '^%s$' % re.escape(process)
             try:
-                pids = subprocess.check_output(['pgrep', safe_process]).splitlines()
+                pids = subprocess.check_output(['pgrep',
+                                                safe_process]).splitlines()
                 running_process_ids.extend(pids)
             except subprocess.CalledProcessError:
                 # No results
@@ -331,7 +332,9 @@ def get_XML_adware_description(source):
             logger.log("Error: No cached copy of %s or other error %s" %
                     (source, e.message))
 
-    return ElementTree.fromstring(adware_text)
+    adwares = [adware for adware in
+               ElementTree.fromstring(adware_text).findall('Adware')]
+    return adwares
 
 
 def remove(files):
@@ -492,8 +495,9 @@ def main():
     #    processes.update(adware_processes)
     controller = AdwareController()
     for source in NEFARIOUS_FILE_SOURCES:
-        adware = Adware(get_XML_adware_description(source))
-        controller.adwares.append(adware)
+        adwares = [Adware(description) for description in
+                   get_XML_adware_description(source)]
+        controller.adwares.extend(adwares)
 
     #for child in controller.adwares[0].xml.getchildren():
     #    print(child.text)
