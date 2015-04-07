@@ -250,7 +250,7 @@ def build_argparser():
     return parser
 
 
-def get_XML_adware_description(source):
+def get_adware_description(source):
     """Given a URL to an adware description file, attempt to
     download, parse, and generate a set of targeted files and processes.
 
@@ -416,37 +416,22 @@ def main():
     if args.verbose:
         logger.verbose = True
 
-    known_adware = set()
-    processes = set()
-    #for source in NEFARIOUS_FILE_SOURCES:
-    #    adware_files, adware_processes = get_adware_description(source)
-    #    known_adware.update(adware_files)
-    #    processes.update(adware_processes)
     controller = AdwareController()
     for source in NEFARIOUS_FILE_SOURCES:
         adwares = [Adware(description) for description in
-                   get_XML_adware_description(source)]
+                   get_adware_description(source)]
         controller.adwares.extend(adwares)
-
-
-    ## Look for projectX files.
-    #known_adware.update(get_projectX_files())
-
-    ## Build a set of adware files that are on the drive.
-    #found_adware = {match for filename in known_adware for match in
-    #                glob.glob(filename)}
-
-    ## Build a set of pids we need to kill.
-    #found_processes = get_running_process_IDs(processes)
 
     # Which action should we perform? An EA has no arguments, so make
     # it the default.
     if args.remove:
-        remove(found_adware)
-        kill(found_processes)
+        # TODO
+        #remove(found_adware)
+        #kill(found_processes)
     elif args.quarantine:
-        quarantine(found_adware)
-        kill(found_processes)
+        # TODO
+        #quarantine(found_adware)
+        #kill(found_processes)
     elif args.stdout:
         controller.report_to_stdout()
     else:
