@@ -37,7 +37,7 @@ import zipfile
 import zlib
 
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 
 # Add any URL's to nefarious file lists here:
@@ -46,10 +46,7 @@ NEFARIOUS_FILE_SOURCES = []
 # Files to look for may include globbing characters.
 # Default is to at least use Apple's files from:
 # https://support.apple.com/en-us/ht203987
-#NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/5c76604f823d45792952/raw/AppleAdwareList')
-NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/86c2cda271cb16736987/raw/TestXML.adf')
-#DEBUG
-#NEFARIOUS_FILE_SOURCES.append('https://gist.github.com/sheagcraig/13850488350aef95c828/raw/TestFilesList')
+NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/86c2cda271cb16736987/raw/Apple-HT203987.adf')
 
 CACHE = '/Library/Application Support/SavingThrow'
 if not os.path.exists(CACHE):
@@ -331,8 +328,7 @@ class Adware():
         # OS X is case insensitive, so we have to test to avoid
         # including duplicates in the case *sensitive* set.
         matches = {match for filename in candidates for match in
-                   glob.glob(filename) if os.path.basename(match) in
-                   os.listdir(os.path.dirname(match))}
+                   glob.glob(filename)}
         self.found.update(matches)
 
         # Build a set of processes to look for.
