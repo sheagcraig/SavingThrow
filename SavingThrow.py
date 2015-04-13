@@ -176,23 +176,26 @@ class AdwareController():
 
     def remove(self):
         """Delete identified files and directories."""
-        files = [file for adware in self.adwares for file in adware.found]
-        self.unload_and_disable_launchd_jobs(files)
-        for item in files:
+        files = [(file, adware.name) for adware in self.adwares for file in
+                 adware.found]
+        self.unload_and_disable_launchd_jobs([file[0] for file in files])
+        for item, name in files:
             try:
                 if os.path.isdir(item):
                     shutil.rmtree(item)
                 elif os.path.isfile(item):
                     os.remove(item)
-                logger.log("Removed adware file(s):  %s" % item)
+                logger.log('Removed adware file: %s:%s' % (name, item))
             except OSError as e:
-                logger.log("Failed to remove adware file(s):  %s, %s" % (item, e))
+                logger.log('Failed to remove adware file: %s:%s Error:  %s'
+                           % (name, item, e))
 
     def quarantine(self):
         """Move all identified files to a timestamped folder in our cache.
 
         """
-        files = [file for adware in self.adwares for file in adware.found]
+        files = [(file, adware.name) for adware in self.adwares for file in
+                 adware.found]
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         # Let's not bother if the list is empty.
         if files:
@@ -202,22 +205,22 @@ class AdwareController():
             backup_dir = os.path.join(quarantine_dir, timestamp)
             os.mkdir(backup_dir)
 
-            self.unload_and_disable_launchd_jobs(files)
+            self.unload_and_disable_launchd_jobs([file[0] for file in files])
 
-            for item in files:
+            for item, name in files:
                 try:
                     shutil.move(item, backup_dir)
-                    logger.log("Quarantined adware file(s):  %s" % item)
+                    logger.log('Quarantined adware file: %s:%s' % (name, item))
                 except OSError as e:
-                    logger.log("Failed to quarantine adware file(s):  %s, %s" %
-                            (item, e))
+                    logger.log('Failed to quarantine adware file: %s:%s '
+                               'Error:  %s' % (name, item, e))
 
             zpath = os.path.join(quarantine_dir, "%s-Quarantine.zip" %
                                  timestamp)
             with zipfile.ZipFile(zpath, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 os.chdir(backup_dir)
                 for item in files:
-                    zipf.write(os.path.basename(item))
+                    zipf.write(os.path.basename(item[0]))
 
             logger.log("Zipped quarantined files to:  %s" % zpath)
 
@@ -298,6 +301,8 @@ class Adware():
         """
         candidates = set()
         process_candidates = set()
+        logger.log('Searching for files and processes defined in: %s'
+                   % self.name)
         # First look for regex-confirmed files to prepare for text
         # replacement.
         files_to_test = self.xml.findall('TestedFile')
@@ -331,6 +336,8 @@ class Adware():
         matches = {match for filename in candidates for match in
                    glob.glob(filename)}
         self.found.update(matches)
+        if matches:
+            logger.log('Found files for: %s' % self.name)
 
         # Build a set of processes to look for.
         process_candidates = {process.text for process in
@@ -351,6 +358,8 @@ class Adware():
             except subprocess.CalledProcessError:
                 # No results
                 pass
+        if running_process_ids:
+            logger.log('Found processes for: %s' % self.name)
         self.processes = running_process_ids
 
 
