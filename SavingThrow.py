@@ -46,7 +46,8 @@ NEFARIOUS_FILE_SOURCES = []
 # Files to look for may include globbing characters.
 # Default is to at least use Apple's files from:
 # https://support.apple.com/en-us/ht203987
-NEFARIOUS_FILE_SOURCES.append('https://gist.githubusercontent.com/sheagcraig/86c2cda271cb16736987/raw/Apple-HT203987.adf')
+HT203987_URL = 'https://raw.githubusercontent.com/SavingThrows/AdwareDefinitionFiles/master/Apple-HT203987.adf'
+NEFARIOUS_FILE_SOURCES.append(HT203987_URL)
 
 CACHE = '/Library/Application Support/SavingThrow'
 if not os.path.exists(CACHE):
