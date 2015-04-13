@@ -46,18 +46,29 @@ NEFARIOUS_FILE_SOURCES = []
 # Files to look for may include globbing characters.
 # Default is to at least use Apple's files from:
 # https://support.apple.com/en-us/ht203987
-HT203987_URL = 'https://raw.githubusercontent.com/SavingThrows/AdwareDefinitionFiles/master/Apple-HT203987.adf'
+HT203987_URL = 'https://raw.githubusercontent.com/SavingThrows/AdwareDefinitionFiles/master/Apple-HT203987.adf' # pylint: disable=line-too-long
 NEFARIOUS_FILE_SOURCES.append(HT203987_URL)
 
 CACHE = '/Library/Application Support/SavingThrow'
 if not os.path.exists(CACHE):
     os.mkdir(CACHE)
 
+# print is a function...
+# pylint: disable=superfluous-parens
 
-class Logger():
+class Logger(object):
     """Simple logging class."""
-    def __init__(self, verbose=False):
-        self.verbose = verbose
+    verbose = False
+
+    @classmethod
+    def enable_verbose(cls):
+        """Set all Loggers to verbose."""
+        cls.verbose = True
+
+    @classmethod
+    def disable_verbose(cls):
+        """Disable verbose on all Loggers."""
+        cls.verbose = False
 
     def log(self, message, log_level=syslog.LOG_ALERT):
         """Log to the syslog, and if verbose, also to stdout."""
@@ -65,24 +76,19 @@ class Logger():
         if self.verbose:
             print(message)
 
-    def vlog(self, message, log_level=syslog.LOG_ALERT):
+    @classmethod
+    def vlog(cls, message, log_level=syslog.LOG_ALERT):
         """Log to the syslog, and to stdout."""
         syslog.syslog(log_level, message)
         print(message)
 
 
-# Make our global logger.
-logger = Logger()
-
-
-class AdwareController():
+class AdwareController(object):
     """Manages a group of Adware objects."""
-    def __init__(self, adwares=[]):
-        """Create a controller, optionally populating the list of
-        adwares.
-
-        """
-        self.adwares = adwares
+    def __init__(self):
+        """Create a controller"""
+        self.adwares = []
+        self.logger = Logger()
 
     def add_adware_from_url(self, source):
         """Given a URL to an adware description file, attempt to
@@ -100,30 +106,30 @@ class AdwareController():
         cache_path = os.path.join(CACHE, cache_file)
 
         try:
-            logger.log("Attempting to update Adware list: %s" % source)
+            self.logger.log("Attempting to update Adware list: %s" % source)
             adware_text = urllib2.urlopen(source).read()
 
             # Update our cached copy.
             try:
-                with open(cache_path, 'w') as f:
-                    f.write(adware_text)
-            except IOError as e:
-                if e[0] == 13:
+                with open(cache_path, 'w') as cache_file:
+                    cache_file.write(adware_text)
+            except IOError as error:
+                if error[0] == 13:
                     print("Please run as root!")
                     sys.exit(13)
                 else:
-                    raise e
+                    raise error
 
-        except urllib2.URLError as e:
+        except urllib2.URLError as error:
             # Use the cached copy if it exists.
-            logger.log("Update failed: %s. Looking for cached copy" %
-                        e.message)
+            self.logger.log("Update failed: %s. Looking for cached copy" %
+                            error.message)
             try:
-                with open(cache_path, 'r') as f:
-                    adware_text = f.read()
-            except IOError as e:
-                logger.log("Error: No cached copy of %s or other error %s" %
-                        (source, e.message))
+                with open(cache_path, 'r') as cache_file:
+                    adware_text = cache_file.read()
+            except IOError as error:
+                self.logger.log("Error: No cached copy of %s or other error %s"
+                                % (source, error.message))
 
         self.adwares.extend(
             [Adware(adware) for adware in
@@ -138,14 +144,12 @@ class AdwareController():
         for adware in self.adwares:
             if adware.found or adware.processes:
                 result += "Name: %s\n" % adware.name
-                for num, found in enumerate(
-                    adware.found, 1):
+                for num, found in enumerate(adware.found, 1):
                     result += "File %s: %s\n" % (num, found)
-                for num, found in enumerate(
-                    adware.processes.items(), 1):
-                        pids_string = ', '.join((str(pid) for pid in found[1]))
-                        result += "Process %s: %s PID: %s\n" % (
-                            num, found[0], pids_string)
+                for num, found in enumerate(adware.processes.items(), 1):
+                    pids_string = ', '.join((str(pid) for pid in found[1]))
+                    result += "Process %s: %s PID: %s\n" % (num, found[0],
+                                                            pids_string)
 
         return result
 
@@ -157,7 +161,7 @@ class AdwareController():
         else:
             result = 'No adware files or processes found.'
 
-        logger.vlog(result)
+        Logger.vlog(result)
 
     def extension_attribute(self):
         """Report back on identified files in a Casper extension attribute
@@ -172,29 +176,29 @@ class AdwareController():
             result += 'False'
 
         result += '</result>'
-        logger.vlog(result)
+        Logger.vlog(result)
 
     def remove(self):
         """Delete identified files and directories."""
-        files = [(file, adware.name) for adware in self.adwares for file in
+        files = [(afile, adware.name) for adware in self.adwares for afile in
                  adware.found]
-        self.unload_and_disable_launchd_jobs([file[0] for file in files])
+        self.unload_and_disable_launchd_jobs([afile[0] for afile in files])
         for item, name in files:
             try:
                 if os.path.isdir(item):
                     shutil.rmtree(item)
                 elif os.path.isfile(item):
                     os.remove(item)
-                logger.log('Removed adware file: %s:%s' % (name, item))
-            except OSError as e:
-                logger.log('Failed to remove adware file: %s:%s Error:  %s'
-                           % (name, item, e))
+                self.logger.log('Removed adware file: %s:%s' % (name, item))
+            except OSError as error:
+                self.logger.log('Failed to remove adware file: %s:%s Error: '
+                                '%s' % (name, item, error))
 
     def quarantine(self):
         """Move all identified files to a timestamped folder in our cache.
 
         """
-        files = [(file, adware.name) for adware in self.adwares for file in
+        files = [(afile, adware.name) for adware in self.adwares for afile in
                  adware.found]
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         # Let's not bother if the list is empty.
@@ -205,15 +209,16 @@ class AdwareController():
             backup_dir = os.path.join(quarantine_dir, timestamp)
             os.mkdir(backup_dir)
 
-            self.unload_and_disable_launchd_jobs([file[0] for file in files])
+            self.unload_and_disable_launchd_jobs([afile[0] for afile in files])
 
             for item, name in files:
                 try:
                     shutil.move(item, backup_dir)
-                    logger.log('Quarantined adware file: %s:%s' % (name, item))
-                except OSError as e:
-                    logger.log('Failed to quarantine adware file: %s:%s '
-                               'Error:  %s' % (name, item, e))
+                    self.logger.log('Quarantined adware file: %s:%s'
+                                    % (name, item))
+                except OSError as error:
+                    self.logger.log('Failed to quarantine adware file: %s:%s '
+                                    'Error:  %s' % (name, item, error))
 
             zpath = os.path.join(quarantine_dir, "%s-Quarantine.zip" %
                                  timestamp)
@@ -222,7 +227,7 @@ class AdwareController():
                 for item in files:
                     zipf.write(os.path.basename(item[0]))
 
-            logger.log("Zipped quarantined files to:  %s" % zpath)
+            self.logger.log("Zipped quarantined files to:  %s" % zpath)
 
             shutil.rmtree(backup_dir)
 
@@ -233,14 +238,14 @@ class AdwareController():
         """
         # Find system-level LaunchD config files.
         conf_locs = {'/Library/LaunchAgents',
-                    '/Library/LaunchDaemons',
-                    '/System/Library/LaunchAgents',
-                    '/System/Library/LaunchDaemons'}
+                     '/Library/LaunchDaemons',
+                     '/System/Library/LaunchAgents',
+                     '/System/Library/LaunchDaemons'}
 
         # Add valid per-user config locations.
         for user_home in os.listdir('/Users'):
             candidate_launchd_loc = os.path.join('/Users', user_home,
-                                                'Library/LaunchAgents')
+                                                 'Library/LaunchAgents')
             if os.path.exists(candidate_launchd_loc):
                 conf_locs.add(candidate_launchd_loc)
         launchd_config_files = {file for file in files for conf_loc in
@@ -248,7 +253,7 @@ class AdwareController():
 
         # Attempt to unload and disable these files.
         for file in launchd_config_files:
-            logger.log('Unloading %s' % file)
+            self.logger.log('Unloading %s' % file)
             result = ''
             try:
                 # Toss out any stderr messages about things not being
@@ -257,12 +262,12 @@ class AdwareController():
                 result = subprocess.check_output(['launchctl', 'unload', '-w',
                                                   file],
                                                  stderr=subprocess.STDOUT)
-            except subprocess.CalledProcessError as e:
+            except subprocess.CalledProcessError as error:
                 # Job may not be loaded, so just log and move on.
-                result = e.message
+                result = error.message
             finally:
                 if result:
-                    logger.log('Launchctl response: %s' % result)
+                    self.logger.log('Launchctl response: %s' % result)
 
     def kill(self):
         """Given a list of running process ids, try to kill them."""
@@ -271,9 +276,9 @@ class AdwareController():
         for process_id in kill_list:
             try:
                 result = subprocess.check_call(['kill', str(process_id)])
-                logger.log("Killed process ID: %s" % process_id)
+                self.logger.log("Killed process ID: %s" % process_id)
             except subprocess.CalledProcessError:
-                logger.log("Failed to kill process ID: %s" % process_id)
+                self.logger.log("Failed to kill process ID: %s" % process_id)
 
 
 class Adware():
@@ -299,6 +304,7 @@ class Adware():
         Adware.
 
         """
+        logger = Logger()
         candidates = set()
         process_candidates = set()
         logger.log('Searching for files and processes defined in: %s'
@@ -395,8 +401,10 @@ def main():
     parser = build_argparser()
     args = parser.parse_args()
 
+    # Configure verbose on logger Borg.
+    logger = Logger()
     if args.verbose:
-        logger.verbose = True
+        logger.enable_verbose()
 
     controller = AdwareController()
     for source in NEFARIOUS_FILE_SOURCES:
