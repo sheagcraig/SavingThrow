@@ -1,4 +1,4 @@
-### 0.0.2 (UNRELEASED)
+### 0.0.3 (April 14, 2015)
 
 Initial release.
 

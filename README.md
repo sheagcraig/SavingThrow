@@ -1,8 +1,6 @@
 SavingThrow
 ===========
-Work in progress, developing [AdwareCheckExtensionAttribute](https://gist.github.com/sheagcraig/69a473f00ce434fffd5b) into something a bit more flexible.
-
-While there are plenty of products available to locate and remove Malware, Adware seems to be mostly left to its own devices. SavingThrow is a flexible script allowing mac system administrators to curate lists of known Adware files (*Adware Definition Files*), to check for on managed computers, and optionally, remove or quarantine them. With time, administrators will hopefully pool their resources and research and develop a set of community best-practice Adware Definition Files akin to the AutoPkg recipe repos to help minimize the expertise required by any one adminstrator in dealing with these annoying pieces of software. SavingThrow of course is not restricted to only software that is "Adware". Rather, it provides a system for flexibly managing lists of undesirable software on client machines and making them go away.
+While there are plenty of products available to locate and remove Malware, Adware seems to be mostly left to its own devices. SavingThrow is a flexible script allowing mac system administrators to curate lists of known Adware files (*Adware Definition Files*), to check for on managed computers, and optionally, remove or quarantine them. The [SavingThrows organization](https://github.com/SavingThrows/AdwareDefinitionFiles) collects vetted ADF files for use, akin to the AutoPkg recipe repos to help minimize the expertise required by any one adminstrator in dealing with these annoying pieces of software. SavingThrow of course is not restricted to only software that is "Adware". Rather, it provides a system for flexibly managing lists of undesirable software on client machines and making them go away.
 
 SavingThrow pulls its ADF's from user-provided URL's, and caches them locally, updating the cache as necessary.
 
@@ -26,6 +24,8 @@ NEFARIOUS_FILE_SOURCES = ['https://ourserver.org/SavingThrow/CouponNagger.adf',
 SavingThrow includes the files described in Apple's [Kbase Article](https://support.apple.com/en-us/ht203987) on removing common adware as a sane, trusted default.
 
 If interest exists for a configuration plist, that would be simple to implement, although it would make use as an extension attribute more tricky (because it would require the config file be in place prior to meaningful inventory collection).
+
+Please note, if adding an adf file from GitHub, make sure you use the URL to the raw file, in the master branch, or you'll pull down all of the GitHub HTML as well! 
 
 Adware Definition Files
 =======================
