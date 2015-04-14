@@ -24,7 +24,6 @@ based on curated lists of associated files.
 
 # Import ALL the modules!
 import argparse
-from xml.etree import ElementTree
 import glob
 import os
 import re
@@ -34,7 +33,9 @@ import sys
 import syslog
 import time
 import urllib2
+from xml.etree import ElementTree
 import zipfile
+# zipfile needs zlib available to compress archives.
 import zlib  # pylint: disable=unused-import
 
 
@@ -51,9 +52,6 @@ NEFARIOUS_FILE_SOURCES.append(HT203987_URL)
 
 CACHE = '/Library/Application Support/SavingThrow'
 
-# print is a function...
-# pylint: disable=superfluous-parens
-
 
 class Logger(object):
     """Simple logging class with shared verbosity state.."""
@@ -69,13 +67,13 @@ class Logger(object):
         """Log to the syslog, and if verbose, also to stdout."""
         syslog.syslog(log_level, message)
         if self.verbose:
-            print(message)
+            print message
 
     @classmethod
     def vlog(cls, message, log_level=syslog.LOG_ALERT):
         """Log to the syslog and to stdout."""
         syslog.syslog(log_level, message)
-        print(message)
+        print message
 
 
 class AdwareController(object):
@@ -101,8 +99,8 @@ class AdwareController(object):
             cache_file = source.split("//")[1].replace("/", ".")[:-1]
         cache_path = os.path.join(CACHE, cache_file)
 
+        self.logger.log("Attempting to update Adware list: %s" % source)
         try:
-            self.logger.log("Attempting to update Adware list: %s" % source)
             adware_text = urllib2.urlopen(source).read()
 
             # Update our cached copy.
@@ -111,7 +109,7 @@ class AdwareController(object):
                     cache_file.write(adware_text)
             except IOError as error:
                 if error[0] == 13:
-                    print("Please run as root!")
+                    print "Please run as root!"
                     sys.exit(13)
                 else:
                     raise error
