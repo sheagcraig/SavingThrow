@@ -88,8 +88,8 @@ class AdwareController(object):
 
     def add_adware_from_url(self, source):
         """Given a URL to an adware description file, attempt to
-        download, parse, and generate a set of targeted files and processes,
-        and add to internal adwares list.
+        download, parse, and generate a set of targeted files and
+        processes, and add to internal adwares list.
 
         """
         cache_file = os.path.basename(source)
@@ -160,9 +160,8 @@ class AdwareController(object):
         Logger.vlog(result)
 
     def extension_attribute(self):
-        """Report back on identified files in a Casper extension attribute
-        format.
-
+        """Report back on identified files in a Casper extension
+        attribute format.
         """
         result = '<result>'
         report_string = self.report_string()
@@ -191,8 +190,8 @@ class AdwareController(object):
                                 '%s' % (name, item, error))
 
     def quarantine(self):
-        """Move all identified files to a timestamped folder in our cache.
-
+        """Move all identified files to a timestamped folder in our
+        cache.
         """
         files = [(afile, adware.name) for adware in self.adwares for afile in
                  adware.found]
@@ -230,7 +229,6 @@ class AdwareController(object):
     def unload_and_disable_launchd_jobs(self, files):
         """Given an iterable of paths, attempt to unload and disable any
         launchd configuration files.
-
         """
         # Find system-level LaunchD config files.
         conf_locs = {'/Library/LaunchAgents',
@@ -280,13 +278,11 @@ class AdwareController(object):
 class Adware(object):
     """Represents one adware 'product', as defined in an Adware
     Definition File (ADF).
-
     """
 
     def __init__(self, xml):
         """Given an Element describing an Adware, setup, and find
         adware files.
-
         """
         self.xml = xml
         self.env = {}
@@ -297,7 +293,7 @@ class Adware(object):
         self.find()
 
     def find(self):
-        """Identify files on the system that correspond to this Adware."""
+        """Identify files on the system that match this Adware."""
         logger = Logger()
         candidates = set()
         process_candidates = set()
