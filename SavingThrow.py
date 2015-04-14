@@ -1,23 +1,24 @@
 #!/usr/bin/python
-"""SavingThrow
+# Copyright (C) 2015 Shea G Craig
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+SavingThrow
 
 Identify or remove files known to be involved in Adware infection,
 based on curated lists of associated files.
-
-Copyright (C) 2015 Shea G Craig <shea.craig@da.org>
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 
@@ -55,7 +56,7 @@ CACHE = '/Library/Application Support/SavingThrow'
 
 
 class Logger(object):
-    """Simple logging class."""
+    """Simple logging class with shared verbosity state.."""
 
     verbose = False
 
@@ -63,11 +64,6 @@ class Logger(object):
     def enable_verbose(cls):
         """Set all Loggers to verbose."""
         cls.verbose = True
-
-    @classmethod
-    def disable_verbose(cls):
-        """Disable verbose on all Loggers."""
-        cls.verbose = False
 
     def log(self, message, log_level=syslog.LOG_ALERT):
         """Log to the syslog, and if verbose, also to stdout."""
@@ -77,7 +73,7 @@ class Logger(object):
 
     @classmethod
     def vlog(cls, message, log_level=syslog.LOG_ALERT):
-        """Log to the syslog, and to stdout."""
+        """Log to the syslog and to stdout."""
         syslog.syslog(log_level, message)
         print(message)
 
