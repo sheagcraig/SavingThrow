@@ -19,6 +19,27 @@ SavingThrow
 
 Identify or remove files known to be involved in Adware infection,
 based on curated lists of associated files.
+
+usage: SavingThrow.py [-h] [-v] [-s | -r | -q]
+                      [jamf-arguments [jamf-arguments ...]]
+
+Modular Adware Extension Attribute and Removal Script. Call with no
+arguments to run as an extension attribute, or with --remove or
+--quarantine to operate as a cleanup tool.
+
+positional arguments:
+  jamf-arguments    Accepts all passed positional arguments (or none) to
+                    allowCasper script usage.
+
+optional arguments:
+  -h, --help        show this help message and exit
+  -v, --verbose     Print to stdout as well as syslog.
+  -s, --stdout      Print standard report.
+  -r, --remove      Remove offending files.
+  -q, --quarantine  Move offending files to quarantine location.
+
+Roll to save against paralyzation, lest the Gelatinous Cube anesthetizes,
+and ultimately, digests you.
 """
 
 
@@ -54,7 +75,7 @@ CACHE = '/Library/Application Support/SavingThrow'
 
 
 class Logger(object):
-    """Simple logging class with shared verbosity state.."""
+    """Simple logging class with shared verbosity state."""
 
     verbose = False
 
@@ -77,18 +98,30 @@ class Logger(object):
 
 
 class AdwareController(object):
-    """Manages a group of Adware objects."""
+    """Manages a group of Adware objects.
+
+    Atributes:
+        adwares: List of Adware objects to control.
+        logger: Logger for handling output.
+    """
 
     def __init__(self):
-        """Create a controller"""
+        """Initialize a new controller with its attributes."""
         self.adwares = []
         self.logger = Logger()
 
     def add_adware_from_url(self, source):
-        """Given a URL to an adware description file, attempt to
+        """Add an Adware object to controller from a URL.
+
+        Given an URL to an adware description file, attempt to
         download, parse, and generate a set of targeted files and
         processes, and add to internal adwares list.
 
+        Arguments:
+            source: String URL to an ADF file.
+
+        Exceptions:
+            All expected exceptions are handled.
         """
         cache_file = os.path.basename(source)
         # Handle URLs which don't point at a specific file. e.g.
@@ -132,10 +165,7 @@ class AdwareController(object):
                  ElementTree.fromstring(adware_text).findall('Adware')])
 
     def report_string(self):
-        """Return a nicely formatted string representation of
-        findings.
-
-        """
+        """Generate a nicely formatted string of findings."""
         result = ''
         for adware in self.adwares:
             if adware.found or adware.processes:
@@ -150,7 +180,7 @@ class AdwareController(object):
         return result
 
     def report_to_stdout(self):
-        """Report back on identified files."""
+        """Report back on identified files to STDOUT."""
         report_string = self.report_string()
         if report_string:
             result = 'Adware files and processes found:\n%s' % report_string
@@ -160,8 +190,13 @@ class AdwareController(object):
         Logger.vlog(result)
 
     def extension_attribute(self):
-        """Report back on identified files in a Casper extension
-        attribute format.
+        """Report back on found files in extension attribute format.
+
+        For use with the Casper suite.
+
+        Generates a report as XML and prints to STDOUT. Report is
+        wrapped in <result> tags, with identified files numbered and
+        ordered by Adware type.
         """
         result = '<result>'
         report_string = self.report_string()
@@ -174,7 +209,16 @@ class AdwareController(object):
         Logger.vlog(result)
 
     def remove(self):
-        """Delete identified files and directories."""
+        """Delete identified files and directories.
+
+        Unloads launchd jobs, then removes all files and directories.
+
+        If files are removed between Adware.find() and now, it will
+        complain about missing files.
+
+        Exceptions:
+            Handles expected exceptions by logging.
+        """
         files = [(afile, adware.name) for adware in self.adwares for afile in
                  adware.found]
         self.unload_and_disable_launchd_jobs([afile[0] for afile in files])
@@ -190,8 +234,17 @@ class AdwareController(object):
                                 '%s' % (name, item, error))
 
     def quarantine(self):
-        """Move all identified files to a timestamped folder in our
-        cache.
+        """Quarantine files to a cache folder.
+
+        Disables launchd jobs, then moves all files and directories
+        to a Quarantine subfolder of the CACHE. Finally, a zip archive
+        is produced, and files are deleted.
+
+        If files are removed between Adware.find() and now, it will
+        complain about missing files.
+
+        Exceptions:
+            Handles expected exceptions by logging.
         """
         files = [(afile, adware.name) for adware in self.adwares for afile in
                  adware.found]
@@ -227,8 +280,15 @@ class AdwareController(object):
             shutil.rmtree(backup_dir)
 
     def unload_and_disable_launchd_jobs(self, files):
-        """Given an iterable of paths, attempt to unload and disable any
-        launchd configuration files.
+        """Unload and disable launchd configuration files.
+
+        Unloads launchd jobs with the -w flag to prevent jobs from
+        respawning.
+
+        Arguments:
+            files: An iterable of file paths on the system. Method will
+                handle determining which files are launchd config
+                files.
         """
         # Find system-level LaunchD config files.
         conf_locs = {'/Library/LaunchAgents',
@@ -264,7 +324,7 @@ class AdwareController(object):
                     self.logger.log('Launchctl response: %s' % result)
 
     def kill(self):
-        """Given a list of running process ids, try to kill them."""
+        """Kill all processes found by controlled Adware(s)."""
         kill_list = [pid for adware in self.adwares for process in
                      adware.processes.values() for pid in process]
         for process_id in kill_list:
@@ -278,14 +338,24 @@ class AdwareController(object):
 class Adware(object):
     """Represents one adware 'product', as defined in an Adware
     Definition File (ADF).
+
+    Attributes:
+        xml: The ADF as an xml.etree.Element.
+        found: Set of adware files found on the current filesystem.
+        processes: Dictionary of ProcessName: PIDs for currently
+            running adware processes.
+        name:
+            String name of Adware from ADF/AdwareName.
     """
 
     def __init__(self, xml):
-        """Given an Element describing an Adware, setup, and find
-        adware files.
+        """Init instance variables and find on current filesystem.
+
+        Arguments:
+            xml: root xml.etree.Element of an Adware Definition File.
         """
         self.xml = xml
-        self.env = {}
+        self._env = {}
         self.found = set()
         self.processes = {}
         self.name = self.xml.findtext('AdwareName')
@@ -293,7 +363,7 @@ class Adware(object):
         self.find()
 
     def find(self):
-        """Identify files on the system that match this Adware."""
+        """Identify adware files and processes on the system."""
         logger = Logger()
         candidates = set()
         process_candidates = set()
@@ -313,16 +383,16 @@ class Adware(object):
                     candidates.add(fname)
 
                     if replacement_key:
-                        self.env[replacement_key] = re.search(regex,
-                                                              text).group(1)
+                        self._env[replacement_key] = re.search(regex,
+                                                               text).group(1)
 
         # Now look for regular files.
         for std_file in self.xml.findall('File'):
             # Perform text replacments
             if "%" in std_file.text:
-                for key in self.env:
+                for key in self._env:
                     std_file.text = std_file.text.replace("%%%s%%" % key,
-                                                          self.env[key])
+                                                          self._env[key])
             candidates.add(std_file.text)
 
         # Find files on the drive.
@@ -339,10 +409,15 @@ class Adware(object):
                               self.xml.findall('Process')}
 
         # Find running processes.
-        self.get_running_process_ids(process_candidates)
+        self._get_running_process_ids(process_candidates)
 
-    def get_running_process_ids(self, processes):
-        """Given a list of process names, get running process ID's."""
+    def _get_running_process_ids(self, processes):
+        """Determine running process PIDs.
+
+        Arguments:
+            processes: Iterable of process names. These names should
+                correspond to those seen in Bash ps/pgrep.
+        """
         self.processes = {}
         for process in processes:
             safe_process = '^%s$' % re.escape(process)
