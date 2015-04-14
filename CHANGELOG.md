@@ -1,4 +1,4 @@
-### 0.0.3 (April 14, 2015)
+### 0.0.3 (April 14, 2015) Gelatinous Cube
 
 Initial release.
 
