@@ -252,15 +252,15 @@ class AdwareController(object):
                                 conf_locs if file.find(conf_loc) == 0}
 
         # Attempt to unload and disable these files.
-        for file in launchd_config_files:
-            self.logger.log('Unloading %s' % file)
+        for afile in launchd_config_files:
+            self.logger.log('Unloading %s' % afile)
             result = ''
             try:
                 # Toss out any stderr messages about things not being
                 # loaded. We just want them off; don't care if they're
                 # not running to begin with.
                 result = subprocess.check_output(['launchctl', 'unload', '-w',
-                                                  file],
+                                                  afile],
                                                  stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as error:
                 # Job may not be loaded, so just log and move on.
@@ -275,7 +275,7 @@ class AdwareController(object):
                      adware.processes.values() for pid in process]
         for process_id in kill_list:
             try:
-                result = subprocess.check_call(['kill', str(process_id)])
+                subprocess.check_call(['kill', str(process_id)])
                 self.logger.log("Killed process ID: %s" % process_id)
             except subprocess.CalledProcessError:
                 self.logger.log("Failed to kill process ID: %s" % process_id)
@@ -366,6 +366,7 @@ class Adware(object):
                 # No results
                 pass
         if running_process_ids:
+            logger = Logger()
             logger.log('Found processes for: %s' % self.name)
         self.processes = running_process_ids
 
