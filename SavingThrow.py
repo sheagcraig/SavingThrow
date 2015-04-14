@@ -50,8 +50,6 @@ HT203987_URL = 'https://raw.githubusercontent.com/SavingThrows/AdwareDefinitionF
 NEFARIOUS_FILE_SOURCES.append(HT203987_URL)
 
 CACHE = '/Library/Application Support/SavingThrow'
-if not os.path.exists(CACHE):
-    os.mkdir(CACHE)
 
 # print is a function...
 # pylint: disable=superfluous-parens
@@ -281,7 +279,7 @@ class AdwareController(object):
                 self.logger.log("Failed to kill process ID: %s" % process_id)
 
 
-class Adware():
+class Adware(object):
     """Represents one adware 'product', as defined in an Adware
     Definition File (ADF).
 
@@ -397,6 +395,10 @@ def build_argparser():
 
 def main():
     """Manage arguments and coordinate our saving throw."""
+    # Ensure we have a cache directory.
+    if not os.path.exists(CACHE):
+        os.mkdir(CACHE)
+
     # Handle command line arguments.
     parser = build_argparser()
     args = parser.parse_args()
