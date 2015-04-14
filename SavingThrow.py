@@ -253,9 +253,9 @@ class AdwareController(object):
                 # Toss out any stderr messages about things not being
                 # loaded. We just want them off; don't care if they're
                 # not running to begin with.
-                result = subprocess.check_output(['launchctl', 'unload', '-w',
-                                                  afile],
-                                                 stderr=subprocess.STDOUT)
+                result = subprocess.check_output(
+                    ['launchctl', 'unload', '-w', afile],
+                    stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as error:
                 # Job may not be loaded, so just log and move on.
                 result = error.message
@@ -343,20 +343,20 @@ class Adware(object):
 
     def get_running_process_ids(self, processes):
         """Given a list of process names, get running process ID's."""
-        running_process_ids = {}
+        self.processes = {}
         for process in processes:
             safe_process = '^%s$' % re.escape(process)
             try:
-                pids = subprocess.check_output(['pgrep',
-                                                safe_process]).splitlines()
-                running_process_ids[process] = pids
+                pids = subprocess.check_output(
+                    ['pgrep', safe_process]).splitlines()
+                self.processes[process] = pids
             except subprocess.CalledProcessError:
                 # No results
                 pass
-        if running_process_ids:
+
+        if self.processes:
             logger = Logger()
             logger.log('Found processes for: %s' % self.name)
-        self.processes = running_process_ids
 
 
 def build_argparser():
