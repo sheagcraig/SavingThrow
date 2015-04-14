@@ -117,10 +117,10 @@ class AdwareController(object):
         download, parse, and generate a set of targeted files and
         processes, and add to internal adwares list.
 
-        Arguments:
+        Args:
             source: String URL to an ADF file.
 
-        Exceptions:
+        Raises:
             All expected exceptions are handled.
         """
         cache_file = os.path.basename(source)
@@ -216,7 +216,7 @@ class AdwareController(object):
         If files are removed between Adware.find() and now, it will
         complain about missing files.
 
-        Exceptions:
+        Raises:
             Handles expected exceptions by logging.
         """
         files = [(afile, adware.name) for adware in self.adwares for afile in
@@ -243,7 +243,7 @@ class AdwareController(object):
         If files are removed between Adware.find() and now, it will
         complain about missing files.
 
-        Exceptions:
+        Raises:
             Handles expected exceptions by logging.
         """
         files = [(afile, adware.name) for adware in self.adwares for afile in
@@ -285,7 +285,7 @@ class AdwareController(object):
         Unloads launchd jobs with the -w flag to prevent jobs from
         respawning.
 
-        Arguments:
+        Args:
             files: An iterable of file paths on the system. Method will
                 handle determining which files are launchd config
                 files.
@@ -351,7 +351,7 @@ class Adware(object):
     def __init__(self, xml):
         """Init instance variables and find on current filesystem.
 
-        Arguments:
+        Args:
             xml: root xml.etree.Element of an Adware Definition File.
         """
         self.xml = xml
@@ -414,7 +414,7 @@ class Adware(object):
     def _get_running_process_ids(self, processes):
         """Determine running process PIDs.
 
-        Arguments:
+        Args:
             processes: Iterable of process names. These names should
                 correspond to those seen in Bash ps/pgrep.
         """
