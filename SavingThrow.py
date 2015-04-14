@@ -321,7 +321,7 @@ class AdwareController(object):
                 result = error.message
             finally:
                 if result:
-                    self.logger.log("Launchctl response: %s" % result)
+                    self.logger.log("Launchctl response: %s" % result.strip())
 
     def kill(self):
         """Kill all processes found by controlled Adware(s)."""
