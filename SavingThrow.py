@@ -18,8 +18,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 """
+
 
 # Import ALL the modules!
 import argparse
@@ -42,9 +42,8 @@ __version__ = '0.0.3'
 
 # Add any URL's to nefarious file lists here:
 NEFARIOUS_FILE_SOURCES = []
-# File format is one path per line.
-# Files to look for may include globbing characters.
-# Default is to at least use Apple's files from:
+
+# Include Apple's identified Adware files by default.
 # https://support.apple.com/en-us/ht203987
 HT203987_URL = 'https://raw.githubusercontent.com/SavingThrows/AdwareDefinitionFiles/master/Apple-HT203987.adf' # pylint: disable=line-too-long
 NEFARIOUS_FILE_SOURCES.append(HT203987_URL)
@@ -54,8 +53,10 @@ CACHE = '/Library/Application Support/SavingThrow'
 # print is a function...
 # pylint: disable=superfluous-parens
 
+
 class Logger(object):
     """Simple logging class."""
+
     verbose = False
 
     @classmethod
@@ -83,6 +84,7 @@ class Logger(object):
 
 class AdwareController(object):
     """Manages a group of Adware objects."""
+
     def __init__(self):
         """Create a controller"""
         self.adwares = []
@@ -284,6 +286,7 @@ class Adware(object):
     Definition File (ADF).
 
     """
+
     def __init__(self, xml):
         """Given an Element describing an Adware, setup, and find
         adware files.
