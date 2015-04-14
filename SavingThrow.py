@@ -100,9 +100,14 @@ class AdwareController(object):
         cache_path = os.path.join(CACHE, cache_file)
 
         self.logger.log("Attempting to update Adware list: %s" % source)
+        adware_text = ''
         try:
             adware_text = urllib2.urlopen(source).read()
+        except urllib2.URLError as error:
+            self.logger.log("Update failed: %s. Looking for cached copy" %
+                            error.message)
 
+        if adware_text:
             # Update our cached copy.
             try:
                 with open(cache_path, 'w') as cache_file:
@@ -113,21 +118,18 @@ class AdwareController(object):
                     sys.exit(13)
                 else:
                     raise error
-
-        except urllib2.URLError as error:
-            # Use the cached copy if it exists.
-            self.logger.log("Update failed: %s. Looking for cached copy" %
-                            error.message)
+        else:
+            # Fallback to the cached file.
             try:
                 with open(cache_path, 'r') as cache_file:
                     adware_text = cache_file.read()
             except IOError as error:
                 self.logger.log("Error: No cached copy of %s or other error %s"
                                 % (source, error.message))
-
-        self.adwares.extend(
-            [Adware(adware) for adware in
-             ElementTree.fromstring(adware_text).findall('Adware')])
+        if adware_text:
+            self.adwares.extend(
+                [Adware(adware) for adware in
+                 ElementTree.fromstring(adware_text).findall('Adware')])
 
     def report_string(self):
         """Return a nicely formatted string representation of
