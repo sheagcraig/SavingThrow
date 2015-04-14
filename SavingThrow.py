@@ -34,7 +34,7 @@ import syslog
 import time
 import urllib2
 import zipfile
-import zlib
+import zlib  # pylint: disable=unused-import
 
 
 __version__ = '0.0.3'
@@ -45,7 +45,7 @@ NEFARIOUS_FILE_SOURCES = []
 
 # Include Apple's identified Adware files by default.
 # https://support.apple.com/en-us/ht203987
-HT203987_URL = 'https://raw.githubusercontent.com/SavingThrows/AdwareDefinitionFiles/master/Apple-HT203987.adf' # pylint: disable=line-too-long
+HT203987_URL = 'https://raw.githubusercontent.com/SavingThrows/AdwareDefinitionFiles/master/Apple-HT203987.adf'  # pylint: disable=line-too-long
 NEFARIOUS_FILE_SOURCES.append(HT203987_URL)
 
 CACHE = '/Library/Application Support/SavingThrow'
@@ -301,10 +301,7 @@ class Adware(object):
         self.find()
 
     def find(self):
-        """Identify files on the system that correspond to this
-        Adware.
-
-        """
+        """Identify files on the system that correspond to this Adware."""
         logger = Logger()
         candidates = set()
         process_candidates = set()
@@ -312,14 +309,13 @@ class Adware(object):
                    % self.name)
         # First look for regex-confirmed files to prepare for text
         # replacement.
-        files_to_test = self.xml.findall('TestedFile')
-        for tested_file in files_to_test:
+        for tested_file in self.xml.findall('TestedFile'):
             regex = re.compile(tested_file.findtext('Regex'))
             replacement_key = tested_file.findtext('ReplacementKey')
             fnames = glob.glob(tested_file.findtext('File'))
             for fname in fnames:
-                with open(fname, 'r') as f:
-                    text = f.read()
+                with open(fname, 'r') as afile:
+                    text = afile.read()
 
                 if re.search(regex, text):
                     candidates.add(fname)
@@ -332,9 +328,9 @@ class Adware(object):
         for std_file in self.xml.findall('File'):
             # Perform text replacments
             if "%" in std_file.text:
-                for key, value in self.env.items():
-                    std_file.text = std_file.text.replace(
-                        "%%%s%%" % key, value)
+                for key in self.env:
+                    std_file.text = std_file.text.replace("%%%s%%" % key,
+                                                          self.env[key])
             candidates.add(std_file.text)
 
         # Find files on the drive.
@@ -351,10 +347,10 @@ class Adware(object):
                               self.xml.findall('Process')}
 
         # Find running processes.
-        self.get_running_process_IDs(process_candidates)
+        self.get_running_process_ids(process_candidates)
 
-    def get_running_process_IDs(self, processes):
-        """Given a list of process names, get running process ID's"""
+    def get_running_process_ids(self, processes):
+        """Given a list of process names, get running process ID's."""
         running_process_ids = {}
         for process in processes:
             safe_process = '^%s$' % re.escape(process)
@@ -380,9 +376,9 @@ def build_argparser():
     epilog = ("Roll to save against paralyzation, lest the Gelatinous "
               "Cube anesthetizes, and ultimately, digests you.")
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
-    help = ("Accepts all passed positional arguments (or none) to "
-            "allow Casper script usage.")
-    parser.add_argument('jamf-arguments', nargs='*', help=help)
+    help_msg = ('Accepts all passed positional arguments (or none) to allow'
+                'Casper script usage.')
+    parser.add_argument('jamf-arguments', nargs='*', help=help_msg)
     parser.add_argument('-v', '--verbose', action="store_true",
                         help="Print to stdout as well as syslog.")
     mode_parser = parser.add_mutually_exclusive_group()
