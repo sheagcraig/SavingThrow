@@ -1,14 +1,27 @@
-### 0.0.3 (April 14, 2015) Gelatinous Cube
+# SavingThrow Change Log
 
-Initial release.
+All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
-CHANGES (from prerelease and gist versions):
+## [Unreleased][unreleased]
+
+- Formatted change log to adhere to [standards](http://keepachangelog.com/).
+
+## [0.0.3] - 2015-04-14 - Gelatinous Cube
+
+### Added
+
+- Initial release.
+
+### Changed (from prerelease and gist versions)
 - Loads ADF (adware definition files) files from the internets.
 - Caches ADF's locally in case network is down.
-- New XML ADF format
+- New XML ADF format.
 - Unloads launchd jobs prior to deletion.
 - Kills processes.
-- More commandline options
-	- -s for regular old reporting to stdout (not in extension attribute format)
-	- -r is still remove
-	- -q Quarantine files into a zip in your ```/Library/Application Support/SavingThrow/Quarantine``` folder
+- More command line options:
+    - `-s` for regular old reporting to stdout (not in extension attribute format)
+    - `-r` is still remove
+    - `-q` quarantine files into a zip in your `/Library/Application Support/SavingThrow/Quarantine` folder
+
+[unreleased]: https://github.com/sheagcraig/SavingThrow/compare/0.0.3...HEAD
+[0.0.3]: https://github.com/sheagcraig/SavingThrow/compare/3ef098d10e6155c5443f5fc05296f6be1d3adaa6...4892846c4313be8ff07edfaf853b1960c22ecdbf
