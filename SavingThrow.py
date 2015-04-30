@@ -27,10 +27,6 @@ Modular Adware Extension Attribute and Removal Script. Call with no
 arguments to run as an extension attribute, or with --remove or
 --quarantine to operate as a cleanup tool.
 
-positional arguments:
-  jamf-arguments    Accepts all passed positional arguments (or none) to
-                    allowCasper script usage.
-
 optional arguments:
   -h, --help        show this help message and exit
   -v, --verbose     Print to stdout as well as syslog.
@@ -60,7 +56,7 @@ import zipfile
 import zlib  # pylint: disable=unused-import
 
 
-__version__ = "0.0.3"
+__version__ = "1.0.4"
 
 
 # Add any URL's to nefarious file lists here:
@@ -441,9 +437,6 @@ def build_argparser():
     epilog = ("Roll to save against paralyzation, lest the Gelatinous "
               "Cube anesthetizes, and ultimately, digests you.")
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
-    help_msg = ("Accepts all passed positional arguments (or none) to allow"
-                "Casper script usage.")
-    parser.add_argument("jamf-arguments", nargs="*", help=help_msg)
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="Print to stdout as well as syslog.")
     mode_parser = parser.add_mutually_exclusive_group()
@@ -466,7 +459,7 @@ def main():
 
     # Handle command line arguments.
     parser = build_argparser()
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
 
     # Configure verbose on logger Borg.
     logger = Logger()
