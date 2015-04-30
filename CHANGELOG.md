@@ -4,10 +4,9 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased][unreleased]
 
-- Formatted change log to adhere to [standards](http://keepachangelog.com/).
-
 ## [1.0.4] - 2015-04-30 - Dire Beetle
 ### Changed
+- Formatted change log to adhere to [standards](http://keepachangelog.com/).
 - Removes positional arguments meant to absorb Casper policy script variables $1-$3.
 - Took SavingThrow out of beta (v.1.x.x)
 
