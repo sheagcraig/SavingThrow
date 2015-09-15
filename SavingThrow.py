@@ -59,7 +59,11 @@ import zlib  # pylint: disable=unused-import
 __version__ = "1.0.4"
 
 
-# Add any URL's to nefarious file lists here:
+# Add any URLs to nefarious file lists
+# format like this
+#
+#NEFARIOUS_FILE_SOURCES = ["https://blah.com/tacos.adf", "https://blah.com/more-tacos.adf"]
+#
 NEFARIOUS_FILE_SOURCES = []
 
 # Include Apple's identified Adware files by default.
