@@ -47,6 +47,8 @@ and ultimately, digests you.
 import argparse
 import glob
 import os
+# TODO: Debug
+import pdb
 import re
 import shutil
 import subprocess
@@ -64,11 +66,11 @@ __version__ = "0.0.3"
 
 
 # Add any URL's to nefarious file lists here:
-NEFARIOUS_FILE_SOURCES = []
+NEFARIOUS_FILE_SOURCES = ["https://raw.githubusercontent.com/SavingThrows/AdwareDefinitionFiles/testing/Crossrider.adf"]
 
 # Include Apple's identified Adware files by default.
 # https://support.apple.com/en-us/ht203987
-HT203987_URL = "https://raw.githubusercontent.com/SavingThrows/AdwareDefinitionFiles/master/Apple-HT203987.adf"  # pylint: disable=line-too-long
+HT203987_URL = "https://raw.githubusercontent.com/SavingThrows/AdwareDefinitionFiles/testing/Apple-HT203987.adf"  # pylint: disable=line-too-long
 NEFARIOUS_FILE_SOURCES.append(HT203987_URL)
 
 CACHE = "/Library/Application Support/SavingThrow"
@@ -372,19 +374,67 @@ class Adware(object):
         # First look for regex-confirmed files to prepare for text
         # replacement.
         for tested_file in self.xml.findall("TestedFile"):
-            regex = re.compile(tested_file.findtext("Regex"))
-            replacement_key = tested_file.findtext("ReplacementKey")
-            fnames = glob.glob(tested_file.findtext("File"))
-            for fname in fnames:
-                with open(fname, "r") as afile:
-                    text = afile.read()
+            # Perform a glob and gather the results for all Path elements.
+            paths = set()
+            for path in tested_file.findall("Path"):
+                for pattern in ("*", ".*"):
+                    #pdb.set_trace()
+                    paths.update(set(glob.glob(os.path.join(path.text,
+                                                            pattern))))
 
-                if re.search(regex, text):
-                    candidates.add(fname)
+            # If provided, get and compile the regex for filename
+            # searching.
+            fname_regex = tested_file.findtext("FilenameRegex")
+            if paths and fname_regex:
+                try:
+                    compiled_fname_regex = re.compile(fname_regex)
+                except re.error as re_error:
+                    logger.log("Invalid regex: %s with error: %s in ADF for: "
+                               "%s" % (fname_regex, self.name,
+                                       re_error.message))
+                    continue
+            elif paths and not fname_regex:
+                logger.log("Paths supplied for %s, but no Regex provided. "
+                           "Skipping this TestedFile." % self.name)
+                continue
 
-                    if replacement_key:
-                        self._env[replacement_key] = re.search(regex,
-                                                               text).group(1)
+            # fnames collects full paths to files which match the
+            # FilenameRegex and 'File' elements which glob, for later
+            # content searching should it be specified.
+            fnames = []
+            for fname_search in paths:
+                if re.search(compiled_fname_regex, fname_search):
+                    fnames.append(fname_search)
+
+            # Perform a glob and gather the results for all File elements.
+            globs = [glob.glob(fname.text) for fname in
+                     tested_file.findall("File")]
+            fnames.extend([item for glob_list in globs for item in glob_list])
+
+            # Get the regex to search within a file for, if it exists.
+            regex = tested_file.findtext("Regex")
+            if regex:
+                try:
+                    compiled_regex = re.compile(regex)
+                except re.error as re_error:
+                    logger.log("Invalid regex: %s with error: %s in ADF for: "
+                               "%s" % (regex, self.name, re_error.message))
+                    continue
+                # Get the replacement key if one is provided.
+                replacement_key = tested_file.findtext("ReplacementKey")
+
+                for fname in fnames:
+                    with open(fname, "r") as afile:
+                        text = afile.read()
+
+                    if re.search(compiled_regex, text):
+                        candidates.add(fname)
+
+                        if replacement_key:
+                            self._env[replacement_key] = re.search(
+                                regex, text).group(1)
+            else:
+                candidates.update(set(fnames))
 
         # Now look for regular files.
         for std_file in self.xml.findall("File"):
