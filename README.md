@@ -6,15 +6,15 @@ While there are plenty of products available to locate and remove Malware, Adwar
 
 SavingThrow pulls its ADF's from user-provided URL's, and caches them locally, updating the cache as necessary.
 
-SavingThrow can report back found Adware files as a Casper extension attribute (*no args*), or straight to stdout (```-s/--stdout```), and always outputs its findings to the system log.
+SavingThrow can report back found Adware files as a Casper extension attribute (*no args*), or straight to stdout (`-s/--stdout`), and always outputs its findings to the system log.
 
-It can delete nefarious files (```-r/--remove```), or move them to a quarantine folder at ```/Library/Application Support/SavingThrow/<datetime>/``` (```-q/--quarantine```). Further, it will unload and disable LaunchD jobs prior to removal or quarantine to hopefully avoid requiring a reboot.
+It can delete nefarious files (`-r/--remove`), or move them to a quarantine folder at `/Library/Application Support/SavingThrow/<datetime>/` (`-q/--quarantine`). Further, it will unload and disable LaunchD jobs prior to removal or quarantine to hopefully avoid requiring a reboot.
 
 Configuration
 =============
 SavingThrow requires admin privileges to run. Take note, it has the potential to delete a lot of files! It is the responsibility of each administrator to review and curate the ADF's configured for their institution.
 
-To configure a list of available ADF sources, edit the ```NEFARIOUS_FILE_SOURCES``` list at the top of SavingThrow.py to include each complete URL (including protocol), which you would like SavingThrow to use. Entries must be single or double quoted, and separated by commas (it's a python list).
+To configure a list of available ADF sources, edit the `NEFARIOUS_FILE_SOURCES` list at the top of SavingThrow.py to include each complete URL (including protocol), which you would like SavingThrow to use. Entries must be single or double quoted, and separated by commas (it's a python list).
 
 For example, say you wanted to add definitions for two extra ADF sources:
 ```
@@ -33,40 +33,40 @@ Adware is defined in an XML formatted *Adware Definition File*. This section des
 
 In most cases, each adware "product" should be defined in its own file, although in some cases, grouping of adware products may make more sense. The ADF format allows an arbitrary number of Adware elements in one ADF file, should this be the case.
 
-The top-level tag should be ```<AdwareDefinition>```, followed by metadata tags describing the document.
+The top-level tag should be `<AdwareDefinition>`, followed by metadata tags describing the document.
 ### Metadata Tags
-- ```<Version>```: Version number of the ADF. This value should be incremented as changes are made over the lifetime of the definition.
-- ```<DefinitionAuthor>```: The author of this ADF.
-- ```<DefinitionSource>```: If the ADF is based on another ADF, provide original source URL's to aid others in researching.
+- `<Version>`: Version number of the ADF. This value should be incremented as changes are made over the lifetime of the definition.
+- `<DefinitionAuthor>`: The author of this ADF.
+- `<DefinitionSource>`: If the ADF is based on another ADF, provide original source URL's to aid others in researching.
 - XML Comments for other top-level notes can go here as well.
 
 ### Adware Elements
-Each adware "product" should be wrapped in an ```<Adware>``` tag.
-Under this, consider including an ```<AdwareName>```, which will get prefaced to any reports.
+Each adware "product" should be wrapped in an `<Adware>` tag.
+Under this, consider including an `<AdwareName>`, which will get prefaced to any reports.
 
-If at all possible, include a source for downloading the adware so interested or OCD admins can test or verify the contents of the definition. Provide as many URLs as needed, each wrapped in ```<AdwareSource>``` tags.
+If at all possible, include a source for downloading the adware so interested or OCD admins can test or verify the contents of the definition. Provide as many URLs as needed, each wrapped in `<AdwareSource>` tags.
 
-The simplest adware element is ```<File>```. ```<File>``` defines a single file path to look for. The path can include standard shell globbing characters (```*?[a-z]```, etc) and text substitution as described below. No tilde expansions are performed.
+The simplest adware element is `<File>`. `<File>` defines a single file path to look for. The path can include standard shell globbing characters (`*?[a-z]`, etc) and text substitution as described below. No tilde expansions are performed.
 
-Files with ambiguous, misleading, dynamically renamed, or obfuscated filenames or paths can be identified with a ```<TestedFile>``` element. Each ```<TestedFile>``` element must include a ```<File>``` and a ```<Regex>``` element, and may optionally include a ```ReplacementKey```.
-```<File>```: As per the standard ```<File>``` tag above; also allows standard globbing characters. This file will be opened and searched using the...
-```<Regex>```: A regular expression that matches some text in this ```<File>```. May include *one* group, indicated by ```( )```'s, which will become the value of ```<ReplacementKey>``` in the text replacement dictionary. 
-```<ReplacementKey>```: If provided, will add or update the text replacement dictionary with the ```<ReplacementKey>``` value as the key, and uses the first group result from the above regex search as a value.
+Files with ambiguous, misleading, dynamically renamed, or obfuscated filenames or paths can be identified with a `<TestedFile>` element. Each `<TestedFile>` element must include a `<File>` and a `<Regex>` element, and may optionally include a `ReplacementKey`.
+`<File>`: As per the standard `<File>` tag above; also allows standard globbing characters. This file will be opened and searched using the...
+`<Regex>`: A regular expression that matches some text in this `<File>`. May include *one* group, indicated by `( )`'s, which will become the value of `<ReplacementKey>` in the text replacement dictionary. 
+`<ReplacementKey>`: If provided, will add or update the text replacement dictionary with the `<ReplacementKey>` value as the key, and uses the first group result from the above regex search as a value.
 
 An example of how this is used can be seen in the default ADF:
 ```
 <TestedFile>
-	<Filename>/Library/LaunchAgents/com.*.agent.plist</Filename>
+	<File>/Library/LaunchAgents/com.*.agent.plist</File>
 	<Regex>.*/Library/Application Support/(.*)/Agent/agent.app/Contents/MacOS/agent</Regex>
 	<ReplacementKey>AGENT</ReplacementKey>
 </TestedFile>
 <TestedFile>
-	<Filename>/Library/LaunchDaemons/com.*.helper.plist</Filename>
+	<File>/Library/LaunchDaemons/com.*.helper.plist</File>
 	<Regex>.*/Library/Application Support/(.*)/Agent/agent.app/Contents/MacOS/agent</Regex>
 	<ReplacementKey>AGENT</ReplacementKey>
 </TestedFile>
 <TestedFile>
-	<Filename>/Library/LaunchDaemons/com.*.daemon.plist</Filename>
+	<File>/Library/LaunchDaemons/com.*.daemon.plist</File>
 	<Regex>.*/Library/Application Support/(.*)/Agent/agent.app/Contents/MacOS/agent</Regex>
 	<ReplacementKey>AGENT</ReplacementKey>
 </TestedFile>
@@ -75,22 +75,22 @@ An example of how this is used can be seen in the default ADF:
 <File>/Library/LaunchDaemons/com.%AGENT%.daemon.plist</File>
 <File>/Library/Application Support/%AGENT%</File>
 ```
-In this example, ```<TestedFile>``` is being used to discover the obfuscated name of the VSearch agent. Each incarnation of this Adware seems to have a different "name", for example "projectX". This name can be found by regex searching with the provided pattern, as a ```/Library/Application Support``` subfolder in several of the LaunchD jobs it installs. The ```<Regex>``` confirms that these files, despite having a globbed filename (e.g. ```com.*.agent.plist```), are related to the adware, and not just false positives. We know this, because these files launch the ```agent``` binary. This regex has used parentheses to group the variable name, and added the value to the replcement dict with the key ```AGENT```.
+In this example, `<TestedFile>` is being used to discover the obfuscated name of the VSearch agent. Each incarnation of this Adware seems to have a different "name", for example "projectX". This name can be found by regex searching with the provided pattern, as a `/Library/Application Support` subfolder in several of the LaunchD jobs it installs. The `<Regex>` confirms that these files, despite having a globbed filename (e.g. `com.*.agent.plist`), are related to the adware, and not just false positives. We know this, because these files launch the `agent` binary. This regex has used parentheses to group the variable name, and added the value to the replacement dict with the key `AGENT`.
 
-Later, in the following group of ```<File>``` elements, this value is then swapped into the ```%AGENT%``` section of the path (see Text Substitution below). Given our example name of "projectX", one filename then becomes ```/Library/LaunchDaemons/com.projectX.daemon.plist```.
+Later, in the following group of `<File>` elements, this value is then swapped into the `%AGENT%` section of the path (see Text Substitution below). Given our example name of "projectX", one filename then becomes `/Library/LaunchDaemons/com.projectX.daemon.plist`.
 
 #### Text Substitution
-```<File>``` elements can make use of text substitution using the results of a regular expression search from a ```<TestedFile>``` operation. A substitution is indicated by wrapping the ```ReplacementKey``` in ```%``` characters, e.g. ```<File>/Library/LaunchAgents/com.%AGENT%.helper.plist</File>```. ```<TestedFile>``` elements are found and searched prior to ```<File>``` searching.
+`<File>` elements can make use of text substitution using the results of a regular expression search from a `<TestedFile>` operation. A substitution is indicated by wrapping the `ReplacementKey` in `%` characters, e.g. `<File>/Library/LaunchAgents/com.%AGENT%.helper.plist</File>`. `<TestedFile>` elements are found and searched prior to `<File>` searching.
 
 ### Process
-If an adware product has a recognizeable process name, put the name in a ```<Process>``` element contained within a ```<Adware>``` tree, and SavingThrow can search for any instances of that process running and kill them. SavingThrow uses the bash shell command ```pgrep``` to search for running processes, which you can use to test your own process definitions.
+If an adware product has a recognizeable process name, put the name in a `<Process>` element contained within a `<Adware>` tree, and SavingThrow can search for any instances of that process running and kill them. SavingThrow uses the bash shell command `pgrep` to search for running processes, which you can use to test your own process definitions.
 
-To eliminate false positives, SavingThrow takes the process name defined in the ```<Process>``` tag, and converts it to a regular expression that matches *ONLY* that name (with regex-reserved characters escaped). This is to say that, for example, if you define a ```<Process>dbf</Process>```, it will generate a pgrep regex of ```^dbf$```, which will match a process named exactly ```dbf```, but NOT match the Apple process ```dbfseventsd```, which ```pgrep dbf``` would match.
+To eliminate false positives, SavingThrow takes the process name defined in the `<Process>` tag, and converts it to a regular expression that matches *ONLY* that name (with regex-reserved characters escaped). This is to say that, for example, if you define a `<Process>dbf</Process>`, it will generate a pgrep regex of `^dbf$`, which will match a process named exactly `dbf`, but NOT match the Apple process `dbfseventsd`, which `pgrep dbf` would match.
 
 ### Case Sensitivity
 Apple, despite appearances, configures drive partitions with a case-*insensitive* filesystem. Python is happy to believe this, and files will match even if the capitalization in the definition does not match that on the filesystem. That being said, please provide the "correct" capitalization in your definitions.
 
-This can be used to your advantage as well. In the example above, the ```<Regex>``` group actually matches with ```projectX``` in the file's text. However, this capitalization is not consistent in all places; in some places it is ```projectX``` and others it is ```projectx```. Due to the case insensitivity, however, when this value gets substituted in, even though the filename does not match the "real" filename's capitalization, SavingThrow still detects it.
+This can be used to your advantage as well. In the example above, the `<Regex>` group actually matches with `projectX` in the file's text. However, this capitalization is not consistent in all places; in some places it is `projectX` and others it is `projectx`. Due to the case insensitivity, however, when this value gets substituted in, even though the filename does not match the "real" filename's capitalization, SavingThrow still detects it.
 
 +1 to save against rods, staves, or wands.
 
