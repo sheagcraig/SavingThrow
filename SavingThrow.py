@@ -47,8 +47,6 @@ and ultimately, digests you.
 import argparse
 import glob
 import os
-# TODO: Debug
-import pdb
 import re
 import shutil
 import subprocess
@@ -62,7 +60,7 @@ import zipfile
 import zlib  # pylint: disable=unused-import
 
 
-__version__ = "0.0.3"
+__version__ = "0.1.0"
 
 
 # Add any URL's to nefarious file lists here:
@@ -378,7 +376,6 @@ class Adware(object):
             paths = set()
             for path in tested_file.findall("Path"):
                 for pattern in ("*", ".*"):
-                    #pdb.set_trace()
                     paths.update(set(glob.glob(os.path.join(path.text,
                                                             pattern))))
 
@@ -516,7 +513,9 @@ def main():
 
     # Handle command line arguments.
     parser = build_argparser()
-    args = parser.parse_args()
+    # We use the parse_known_args method to avoid having to deal with
+    # any empty arguments Casper may tack onto the end.
+    args = parser.parse_known_args()[0]
 
     # Configure verbose on logger Borg.
     logger = Logger()
