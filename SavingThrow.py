@@ -60,14 +60,14 @@ import zipfile
 import zlib  # pylint: disable=unused-import
 
 
-__version__ = "1.0.4"
+__version__ = "1.1.0"
 
 
 # Add any URLs to nefarious file lists
 # format like this
-#
-#NEFARIOUS_FILE_SOURCES = ["https://blah.com/tacos.adf", "https://blah.com/more-tacos.adf"]
-#
+# NEFARIOUS_FILE_SOURCES = ["https://blah.com/tacos.adf",
+#                           "https://blah.com/more-tacos.adf"]
+
 NEFARIOUS_FILE_SOURCES = []
 
 # Include Apple's identified Adware files by default.
@@ -383,17 +383,21 @@ class Adware(object):
                     paths.update(set(glob.glob(os.path.join(path.text,
                                                             pattern))))
 
-            # If provided, get and compile the regex for filename
+            # If provided, get and compile the regexes for filename
             # searching.
-            fname_regex = tested_file.findtext("FilenameRegex")
-            if paths and fname_regex:
-                try:
-                    compiled_fname_regex = re.compile(fname_regex)
-                except re.error as re_error:
-                    logger.log("Invalid regex: %s with error: %s in ADF for: "
-                               "%s" % (fname_regex, self.name,
-                                       re_error.message))
-                    continue
+            fname_regexen = [fregex.text for fregex in
+                             tested_file.findall("FilenameRegex")]
+            compiled_fname_regexen = []
+            if paths and fname_regexen:
+                for fname_regex in fname_regexen:
+                    try:
+                        compiled_fname_regex = re.compile(fname_regex)
+                        compiled_fname_regexen.append(compiled_fname_regex)
+                    except re.error as re_error:
+                        logger.log("Invalid regex: %s with error: %s in ADF "
+                                   "for: %s" % (fname_regex, self.name,
+                                                re_error.message))
+                        continue
             elif paths and not fname_regex:
                 logger.log("Paths supplied for %s, but no Regex provided. "
                            "Skipping this TestedFile." % self.name)
@@ -404,8 +408,9 @@ class Adware(object):
             # content searching should it be specified.
             fnames = []
             for fname_search in paths:
-                if re.search(compiled_fname_regex, fname_search):
-                    fnames.append(fname_search)
+                for compiled_fname_regex in compiled_fname_regexen:
+                    if re.search(compiled_fname_regex, fname_search):
+                        fnames.append(fname_search)
 
             # Perform a glob and gather the results for all File elements.
             globs = [glob.glob(fname.text) for fname in
@@ -413,14 +418,18 @@ class Adware(object):
             fnames.extend([item for glob_list in globs for item in glob_list])
 
             # Get the regex to search within a file for, if it exists.
-            regex = tested_file.findtext("Regex")
-            if regex:
-                try:
-                    compiled_regex = re.compile(regex)
-                except re.error as re_error:
-                    logger.log("Invalid regex: %s with error: %s in ADF for: "
-                               "%s" % (regex, self.name, re_error.message))
-                    continue
+            regexen = [regex.text for regex in tested_file.findall("Regex")]
+            compiled_regexen = []
+            if regexen:
+                for regex in regexen:
+                    try:
+                        compiled_regex = re.compile(regex)
+                        compiled_regexen.append(compiled_regex)
+                    except re.error as re_error:
+                        logger.log("Invalid regex: %s with error: %s in ADF "
+                                   "for: %s" % (regex, self.name,
+                                                re_error.message))
+                        continue
                 # Get the replacement key if one is provided.
                 replacement_key = tested_file.findtext("ReplacementKey")
 
@@ -428,12 +437,13 @@ class Adware(object):
                     with open(fname, "r") as afile:
                         text = afile.read()
 
-                    if re.search(compiled_regex, text):
-                        candidates.add(fname)
+                    for compiled_regex in compiled_regexen:
+                        if re.search(compiled_regex, text):
+                            candidates.add(fname)
 
-                        if replacement_key:
-                            self._env[replacement_key] = re.search(
-                                regex, text).group(1)
+                            if replacement_key:
+                                self._env[replacement_key] = re.search(
+                                    regex, text).group(1)
             else:
                 candidates.update(set(fnames))
 
