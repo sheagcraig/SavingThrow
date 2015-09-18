@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased][unreleased]
+### Added
+- `TestedFile` now adds a `FilenameRegex` and `Path` element to its allowed types of subelements.
+	- Specify as many `Path` elements to folders as you want.
+	- You may specify as many `FilenameRegex` elements to use to determine whether any of the files contained in the `Path`s match. A file being considered for being adware must only match _one_ of `FilenameRegex` (Logical OR).
+	- You may now specify as many `Regex` elements of a `TestedFile` as you want. A file being considered for being adware must only match _one_ of `Regex` (Logical OR).
+	- If you have specified a `Regex`, then the contents will also be tested before adding to the candidate list.
+- You may now specify as many `File` elements in a `TestedFile` as you want also.
+- Malformed XML will not stop SavingThrow from processing.
+- Added `SavingThrowVersion` tag to top-level of ADFs. If the SavingThrow version is less than the one requested by the ADF, it will log a warning, and try to continue.
 
 ## [1.0.4] - 2015-04-30 - Dire Beetle
 ### Changed
