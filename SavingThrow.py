@@ -45,6 +45,7 @@ and ultimately, digests you.
 
 # Import ALL the modules!
 import argparse
+from distutils.version import StrictVersion
 import glob
 import os
 import re
@@ -164,9 +165,27 @@ class AdwareController(object):
                 self.logger.log("Error: No cached copy of %s or other error %s"
                                 % (source, error.message))
         if adware_text:
+            adf_element = ElementTree.fromstring(adware_text)
+            self.warn_if_old_version(adf_element)
             self.adwares.extend(
-                [Adware(adware) for adware in
-                 ElementTree.fromstring(adware_text).findall("Adware")])
+                [Adware(adware) for adware in adf_element.findall("Adware")])
+
+    def warn_if_old_version(self, adf_element):
+        """Warn the user if the SavingThrow version is older than the ADF.
+
+        An ADF file may optionally specify a minimum "SavingThrowVersion"
+        which is needed for all features to work. The ADF may still work
+        at reduced capacity.
+        """
+        min_version_elem = adf_element.find("SavingThrowVersion")
+        logger = Logger()
+        if min_version_elem is not None:
+            min_version = StrictVersion(min_version_elem.text)
+            if min_version > StrictVersion(__version__):
+                adware_names = ", ".join([name.findtext("AdwareName") for name
+                                          in adf_element.findall("Adware")])
+                logger.log("%s require(s) SavingThrow version %s" %
+                           (adware_names, min_version))
 
     def report_string(self):
         """Generate a nicely formatted string of findings."""
