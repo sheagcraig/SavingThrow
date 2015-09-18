@@ -36,6 +36,7 @@ In most cases, each adware "product" should be defined in its own file, although
 The top-level tag should be `<AdwareDefinition>`, followed by metadata tags describing the document.
 ### Metadata Tags
 - `<Version>`: Version number of the ADF. This value should be incremented as changes are made over the lifetime of the definition.
+- `<SavingThrowVersion>`: SavingThrow version 1.1.0 introduced the `<TestedFile>` subelements `<Path>` and `<FilenameRegex>` and the ability to do multiples of each. This obviously won't work in older versions of SavingThrow. Therefore, ADF files can specify a minimum version of SavingThrow required to use all of the included features. SavingThrow will log a warning, but try to run the ADF anyway, if the version is too old.
 - `<DefinitionAuthor>`: The author of this ADF.
 - `<DefinitionSource>`: If the ADF is based on another ADF, provide original source URL's to aid others in researching.
 - XML Comments for other top-level notes can go here as well.
@@ -48,9 +49,17 @@ If at all possible, include a source for downloading the adware so interested or
 
 The simplest adware element is `<File>`. `<File>` defines a single file path to look for. The path can include standard shell globbing characters (`*?[a-z]`, etc) and text substitution as described below. No tilde expansions are performed.
 
-Files with ambiguous, misleading, dynamically renamed, or obfuscated filenames or paths can be identified with a `<TestedFile>` element. Each `<TestedFile>` element must include a `<File>` and a `<Regex>` element, and may optionally include a `ReplacementKey`.
+Files with ambiguous, misleading, dynamically renamed, or obfuscated filenames or paths can be identified with a `<TestedFile>` element. Each `<TestedFile>` element can include as many `<Path>`, `<File>`, `<FilenameRegex>`, and `<Regex>` tags as needed to define problem files, and may optionally include a `ReplacementKey`.
+
+The rules are that if you include one or more `<FilenameRegex>`, and one more more `<Path>`, each regex will be tested against every file found at `<Path>`. Matches will be added to a list.
+
+Then, for each `<Regex>`, open each file from the above matches list, plus any `<File>`s explictly specified (including globbing characters as per the standard `<File>` tag), and perform a regular expression search of the contents of that file. Matches are added to the final candidate list.
+
+Individual details on these tags are below:
+`<FilenameRegex>`: Regular expression used against each file specified as a `<Path>`. Matches are added to a candidate list.
+`<Path>`: A directory on the computer to search with `<FilenameRegex>`s. May use globbing characters.
 `<File>`: As per the standard `<File>` tag above; also allows standard globbing characters. This file will be opened and searched using the...
-`<Regex>`: A regular expression that matches some text in this `<File>`. May include *one* group, indicated by `( )`'s, which will become the value of `<ReplacementKey>` in the text replacement dictionary. 
+`<Regex>`: A regular expression that matches some text in the `<File>`s and matched `<Path>`s. May include *one* group, indicated by `( )`'s, which will become the value of `<ReplacementKey>` in the text replacement dictionary.
 `<ReplacementKey>`: If provided, will add or update the text replacement dictionary with the `<ReplacementKey>` value as the key, and uses the first group result from the above regex search as a value.
 
 An example of how this is used can be seen in the default ADF:
