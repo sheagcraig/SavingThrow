@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased][unreleased]
+
+## [1.1.0] - 2015-09-18 - Mind Flayer
 ### Added
 - `TestedFile` now adds a `FilenameRegex` and `Path` element to its allowed types of subelements.
 	- Specify as many `Path` elements to folders as you want.
@@ -38,6 +40,7 @@ All notable changes to this project will be documented in this file. This projec
     - `-r` is still remove
     - `-q` quarantine files into a zip in your `/Library/Application Support/SavingThrow/Quarantine` folder
 
-[unreleased]: https://github.com/sheagcraig/SavingThrow/compare/1.0.4...HEAD
+[unreleased]: https://github.com/sheagcraig/SavingThrow/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/sheagcraig/SavingThrow/compare/1.0.4...1.1.0
 [1.0.4]: https://github.com/sheagcraig/SavingThrow/compare/0.0.3...1.0.4
 [0.0.3]: https://github.com/sheagcraig/SavingThrow/compare/3ef098d10e6155c5443f5fc05296f6be1d3adaa6...4892846c4313be8ff07edfaf853b1960c22ecdbf
