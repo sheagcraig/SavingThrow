@@ -165,10 +165,18 @@ class AdwareController(object):
                 self.logger.log("Error: No cached copy of %s or other error %s"
                                 % (source, error.message))
         if adware_text:
-            adf_element = ElementTree.fromstring(adware_text)
-            self.warn_if_old_version(adf_element)
-            self.adwares.extend(
-                [Adware(adware) for adware in adf_element.findall("Adware")])
+            try:
+                adf_element = ElementTree.fromstring(adware_text)
+            except ElementTree.ParseError as err:
+                logger = Logger()
+                logger.log("ADF at %s is invalid XML (Error: %s)" %
+                           (source, err.message))
+                adf_element = None
+
+            if adf_element is not None:
+                self.warn_if_old_version(adf_element)
+                self.adwares.extend([Adware(adware) for adware in
+                                     adf_element.findall("Adware")])
 
     def warn_if_old_version(self, adf_element):
         """Warn the user if the SavingThrow version is older than the ADF.
