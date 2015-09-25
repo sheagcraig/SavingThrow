@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased][unreleased]
 
+### Fixed
+- Directories with trailing slashes blew up when trying to quarantine.
+
 ## [1.1.0] - 2015-09-18 - Mind Flayer
 ### Added
 - `TestedFile` now adds a `FilenameRegex` and `Path` element to its allowed types of subelements.
