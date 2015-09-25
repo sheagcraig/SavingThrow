@@ -304,7 +304,10 @@ class AdwareController(object):
             with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as zipf:
                 os.chdir(backup_dir)
                 for item in files:
-                    zipf.write(os.path.basename(item[0]))
+                    try:
+                        zipf.write(os.path.basename(item[0].rstrip("/")))
+                    except OSError:
+                        pass
 
             self.logger.log("Zipped quarantined files to:  %s" % zpath)
 
