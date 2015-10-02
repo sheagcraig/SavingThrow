@@ -17,8 +17,8 @@ To configure a list of available ADF sources, edit the `NEFARIOUS_FILE_SOURCES` 
 For example, say you wanted to add definitions for two extra ADF sources:
 ```
 # Add any URL's to nefarious file lists here:
-NEFARIOUS_FILE_SOURCES = ['https://ourserver.org/SavingThrow/CouponNagger.adf',
-						  'https://ourserver.org/SavingThrow/ClickBait.'adf]
+NEFARIOUS_FILE_SOURCES = ["https://ourserver.org/SavingThrow/CouponNagger.adf",
+						  "https://ourserver.org/SavingThrow/ClickBait.adf"]
 ```
 
 SavingThrow includes the files described in Apple's [Kbase Article](https://support.apple.com/en-us/ht203987) on removing common adware as a sane, trusted default.
