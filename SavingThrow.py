@@ -295,6 +295,21 @@ class AdwareController(object):
                     shutil.move(item, backup_dir)
                     self.logger.log("Quarantined adware file: %s:%s"
                                     % (name, item))
+                except shutil.Error:
+                    # Raised when moving a directory, and it already
+                    # exists.
+                    counter = 1
+                    success = False
+                    while not success:
+                        if counter > 10:
+                            # Just give up.
+                            break
+                        try:
+                            shutil.move(item, backup_dir + "/%s-%s" % (
+                                os.path.basename(item), counter))
+                            success = True
+                        except shutil.Error:
+                            counter += 1
                 except OSError as error:
                     self.logger.log("Failed to quarantine adware file: %s:%s "
                                     "Error:  %s" % (name, item, error))

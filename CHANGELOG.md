@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. This projec
 
 ### Fixed
 - Directories with trailing slashes blew up when trying to quarantine.
+- Fixed trying to `shutil.move` multiple folders with the same name to the quarantine directory by appending a counter variable to the end and trying again. It gives up after 10 failures.
 
 ## [1.1.0] - 2015-09-18 - Mind Flayer
 ### Added
