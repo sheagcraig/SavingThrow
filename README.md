@@ -1,6 +1,6 @@
 SavingThrow
 ===========
-While there are plenty of products available to locate and remove Malware, Adware seems to be mostly left to its own devices. SavingThrow is a flexible script allowing mac system administrators to curate lists of known Adware files (*Adware Definition Files*), to check for on managed computers, and optionally, remove or quarantine them. The [SavingThrows organization](https://github.com/SavingThrows/AdwareDefinitionFiles) collects vetted ADF files for use, akin to the AutoPkg recipe repos to help minimize the expertise required by any one adminstrator in dealing with these annoying pieces of software. SavingThrow of course is not restricted to only software that is "Adware". Rather, it provides a system for flexibly managing lists of undesirable software on client machines and making them go away.
+While there are plenty of products available to locate and remove Malware, Adware seems to be mostly left to its own devices. SavingThrow is a flexible script allowing mac system administrators to curate lists of known Adware files (*Adware Definition Files*), to check for on managed computers, and optionally, remove or quarantine them. The [SavingThrows organization](https://github.com/SavingThrows/AdwareDefinitionFiles) collects vetted ADF files for use, akin to the AutoPkg recipe repos to help minimize the expertise required by any one administrator in dealing with these annoying pieces of software. SavingThrow of course is not restricted to only software that is "Adware". Rather, it provides a system for flexibly managing lists of undesirable software on client machines and making them go away.
 
 SavingThrow pulls its ADF's from user-provided URL's, and caches them locally, updating the cache as necessary.
 
@@ -21,25 +21,33 @@ NEFARIOUS_FILE_SOURCES = ["https://ourserver.org/SavingThrow/CouponNagger.adf",
 						  "https://ourserver.org/SavingThrow/ClickBait.adf"]
 ```
 
-SavingThrow includes the files described in Apple's [Kbase Article](https://support.apple.com/en-us/ht203987) on removing common adware as a sane, trusted default.
+SavingThrow includes the files described in Apple's [Kbase Article](https://support.apple.com/ht203987) on removing common adware as a sane, trusted default.
 
 If interest exists for a configuration plist, that would be simple to implement, although it would make use as an extension attribute more tricky (because it would require the config file be in place prior to meaningful inventory collection).
 
 Please note, if adding an adf file from GitHub, make sure you use the URL to the raw file, in the master branch, or you'll pull down all of the GitHub HTML as well! 
+For example, don't reference:  
+https://github.com/SavingThrows/AdwareDefinitionFiles/blob/master/Genieo.adf
+
+Reference this instead:  
+https://github.com/SavingThrows/AdwareDefinitionFiles/raw/master/Genieo.adf
+
 
 Adware Definition Files
 =======================
-Adware is defined in an XML formatted *Adware Definition File*. This section describes the ADF format and structure, as well as makes suggestions about some of the more complicated types. To see an example ADF that incorporates most of these features, look no further than the [default ADF]()
+Adware is defined in an XML formatted *Adware Definition File*. This section describes the ADF format and structure, as well as makes suggestions about some of the more complicated types. To see an example ADF that incorporates most of these features, look no further than the [Default ADF](#default-adf)
 
 In most cases, each adware "product" should be defined in its own file, although in some cases, grouping of adware products may make more sense. The ADF format allows an arbitrary number of Adware elements in one ADF file, should this be the case.
 
 The top-level tag should be `<AdwareDefinition>`, followed by metadata tags describing the document.
 ### Metadata Tags
 - `<Version>`: Version number of the ADF. This value should be incremented as changes are made over the lifetime of the definition.
-- `<SavingThrowVersion>`: SavingThrow version 1.1.0 introduced the `<TestedFile>` subelements `<Path>` and `<FilenameRegex>` and the ability to do multiples of each. This obviously won't work in older versions of SavingThrow. Therefore, ADF files can specify a minimum version of SavingThrow required to use all of the included features. SavingThrow will log a warning, but try to run the ADF anyway, if the version is too old.
+- `<SavingThrowVersion>`: i.e. SavingThrow version 1.1.0 
 - `<DefinitionAuthor>`: The author of this ADF.
 - `<DefinitionSource>`: If the ADF is based on another ADF, provide original source URL's to aid others in researching.
 - XML Comments for other top-level notes can go here as well.
+
+
 
 ### Adware Elements
 Each adware "product" should be wrapped in an `<Adware>` tag.
@@ -53,7 +61,10 @@ Files with ambiguous, misleading, dynamically renamed, or obfuscated filenames o
 
 The rules are that if you include one or more `<FilenameRegex>`, and one more more `<Path>`, each regex will be tested against every file found at `<Path>`. Matches will be added to a list.
 
-Then, for each `<Regex>`, open each file from the above matches list, plus any `<File>`s explictly specified (including globbing characters as per the standard `<File>` tag), and perform a regular expression search of the contents of that file. Matches are added to the final candidate list.
+Then, for each `<Regex>`, open each file from the above matches list, plus any `<File>`s explicitly specified (including globbing characters as per the standard `<File>` tag), and perform a regular expression search of the contents of that file. Matches are added to the final candidate list.
+
+*NB: `TestedFile` support was added in version 1.1.0*
+
 
 Individual details on these tags are below:
 `<FilenameRegex>`: Regular expression used against each file specified as a `<Path>`. Matches are added to a candidate list.
@@ -62,8 +73,13 @@ Individual details on these tags are below:
 `<Regex>`: A regular expression that matches some text in the `<File>`s and matched `<Path>`s. May include *one* group, indicated by `( )`'s, which will become the value of `<ReplacementKey>` in the text replacement dictionary.
 `<ReplacementKey>`: If provided, will add or update the text replacement dictionary with the `<ReplacementKey>` value as the key, and uses the first group result from the above regex search as a value.
 
+### Default ADF
 An example of how this is used can be seen in the default ADF:
 ```
+<Version>3</Version>
+<SavingThrowVersion>1.1.0</SavingThrowVersion>
+<DefinitionAuthor>Good Samaritan</DefinitionAuthor>
+<DefinitionSource>https://github.com/sheagcraig/SavingThrow</DefinitionSource>
 <TestedFile>
 	<File>/Library/LaunchAgents/com.*.agent.plist</File>
 	<Regex>.*/Library/Application Support/(.*)/Agent/agent.app/Contents/MacOS/agent</Regex>
@@ -83,6 +99,8 @@ An example of how this is used can be seen in the default ADF:
 <File>/Library/LaunchDaemons/com.%AGENT%.helper.plist</File>
 <File>/Library/LaunchDaemons/com.%AGENT%.daemon.plist</File>
 <File>/Library/Application Support/%AGENT%</File>
+<Comment>This is a test. This is only a test, or there would have been a support ticket.</Comment>
+
 ```
 In this example, `<TestedFile>` is being used to discover the obfuscated name of the VSearch agent. Each incarnation of this Adware seems to have a different "name", for example "projectX". This name can be found by regex searching with the provided pattern, as a `/Library/Application Support` subfolder in several of the LaunchD jobs it installs. The `<Regex>` confirms that these files, despite having a globbed filename (e.g. `com.*.agent.plist`), are related to the adware, and not just false positives. We know this, because these files launch the `agent` binary. This regex has used parentheses to group the variable name, and added the value to the replacement dict with the key `AGENT`.
 
@@ -92,7 +110,7 @@ Later, in the following group of `<File>` elements, this value is then swapped i
 `<File>` elements can make use of text substitution using the results of a regular expression search from a `<TestedFile>` operation. A substitution is indicated by wrapping the `ReplacementKey` in `%` characters, e.g. `<File>/Library/LaunchAgents/com.%AGENT%.helper.plist</File>`. `<TestedFile>` elements are found and searched prior to `<File>` searching.
 
 ### Process
-If an adware product has a recognizeable process name, put the name in a `<Process>` element contained within a `<Adware>` tree, and SavingThrow can search for any instances of that process running and kill them. SavingThrow uses the bash shell command `pgrep` to search for running processes, which you can use to test your own process definitions.
+If an adware product has a recognizable process name, put the name in a `<Process>` element contained within a `<Adware>` tree, and SavingThrow can search for any instances of that process running and kill them. SavingThrow uses the bash shell command `pgrep` to search for running processes, which you can use to test your own process definitions.
 
 To eliminate false positives, SavingThrow takes the process name defined in the `<Process>` tag, and converts it to a regular expression that matches *ONLY* that name (with regex-reserved characters escaped). This is to say that, for example, if you define a `<Process>dbf</Process>`, it will generate a pgrep regex of `^dbf$`, which will match a process named exactly `dbf`, but NOT match the Apple process `dbfseventsd`, which `pgrep dbf` would match.
 
@@ -103,4 +121,4 @@ This can be used to your advantage as well. In the example above, the `<Regex>` 
 
 +1 to save against rods, staves, or wands.
 
-![Image of Gelatinous Cube](http://media.tumblr.com/1f75ab89cd54f34d7441afb1bf4442c3/tumblr_inline_mzsyks2vh31qfgehu.png)
+![Image of Gelatinous Cube](https://media.tumblr.com/1f75ab89cd54f34d7441afb1bf4442c3/tumblr_inline_mzsyks2vh31qfgehu.png)
