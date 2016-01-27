@@ -17,14 +17,14 @@
 """
 SavingThrow
 
-Identify or remove files known to be involved in Adware infection,
+Identify or remove files known to be involved with undesired apps,
 based on curated lists of associated files.
 
 usage: SavingThrow.py [-h] [-v] [-s | -r | -q]
                       [jamf-arguments [jamf-arguments ...]]
 
-Modular Adware Extension Attribute and Removal Script. Call with no
-arguments to run as an extension attribute, or with --remove or
+Modular Undesired file Extension Attribute and Removal Script. Call with
+no arguments to run as an extension attribute, or with --remove or
 --quarantine to operate as a cleanup tool.
 
 positional arguments:
@@ -36,11 +36,34 @@ optional arguments:
   -v, --verbose     Print to stdout as well as syslog.
   -s, --stdout      Print standard report.
   -r, --remove      Remove offending files.
-  -q, --quarantine  Move offending files to quarantine location.
+  -q, --quarantine  Move files to quarantine location.
 
 Roll to save against paralyzation, lest the Gelatinous Cube anesthetizes,
 and ultimately, digests you.
 """
+
+# Historical Note
+# SavingThrow was originally a tool for detecting and removing the
+# software defined in Apple's KnowledgeBase article HT203987 located
+# here: https://support.apple.com/en-us/ht203987
+# As such, it's initial use was to specifically target and remove
+# adware. However, as the idea of a community-sourced tool for
+# detecting and removing apps based on collaborative research took off,
+# SavingThrow grew beyond its initial target of Adware to include
+# the ability to find and remove legitimate software as well.
+
+# The software and documentation has been updated as best as possible
+# without breaking compatibility with older behavior by naming things
+# more appropriately and respectfully as "Apps" rather than "Adware".
+# Ultimately, it is up to the person making use of this tool to decide
+# what is wanted in their environment, and no judgement or slander is
+# intentional or implied by the creator of this software.
+
+# Wherever compatibility with older ADF format tag-names would break
+# existing, but out-of-date installations of SavingThrow, the code will
+# use the old names with the term "Adware", despite their inaccurate
+# description of the range of software potentially targeted by users
+# of this software.
 
 
 # Import ALL the modules!
@@ -69,12 +92,16 @@ __version__ = "1.1.0"
 # NEFARIOUS_FILE_SOURCES = ["https://blah.com/tacos.adf",
 #                           "https://blah.com/more-tacos.adf"]
 
+# Included for historical reasons: see note at top.
 NEFARIOUS_FILE_SOURCES = []
+ADF_FILE_SOURCES = []
 
 # Include Apple's identified Adware files by default.
 # https://support.apple.com/en-us/ht203987
 HT203987_URL = "https://raw.githubusercontent.com/SavingThrows/AdwareDefinitionFiles/master/Apple-HT203987.adf"  # pylint: disable=line-too-long
 NEFARIOUS_FILE_SOURCES.append(HT203987_URL)
+
+ADF_FILE_SOURCES.extend(NEFARIOUS_FILE_SOURCES)
 
 CACHE = "/Library/Application Support/SavingThrow"
 
@@ -102,25 +129,25 @@ class Logger(object):
         print message
 
 
-class AdwareController(object):
-    """Manages a group of Adware objects.
+class FileController(object):
+    """Manages a group of App objects.
 
     Atributes:
-        adwares: List of Adware objects to control.
+        apps: List of App objects to control.
         logger: Logger for handling output.
     """
 
     def __init__(self):
         """Initialize a new controller with its attributes."""
-        self.adwares = []
+        self.apps = []
         self.logger = Logger()
 
-    def add_adware_from_url(self, source):
-        """Add an Adware object to controller from a URL.
+    def add_app_from_url(self, source):
+        """Add an App object to controller from a URL.
 
-        Given an URL to an adware description file, attempt to
+        Given an URL to an app description file, attempt to
         download, parse, and generate a set of targeted files and
-        processes, and add to internal adwares list.
+        processes, and add to internal apps list.
 
         Args:
             source: String URL to an ADF file.
@@ -137,19 +164,19 @@ class AdwareController(object):
             cache_file = source.split("//")[1].replace("/", ".")[:-1]
         cache_path = os.path.join(CACHE, cache_file)
 
-        self.logger.log("Attempting to update Adware list: %s" % source)
-        adware_text = ""
+        self.logger.log("Attempting to update App list: %s" % source)
+        app_text = ""
         try:
-            adware_text = urllib2.urlopen(source).read()
+            app_text = urllib2.urlopen(source).read()
         except urllib2.URLError as error:
             self.logger.log("Update failed: %s. Looking for cached copy" %
                             error.message)
 
-        if adware_text:
+        if app_text:
             # Update our cached copy.
             try:
                 with open(cache_path, "w") as cache_file:
-                    cache_file.write(adware_text)
+                    cache_file.write(app_text)
             except IOError as error:
                 if error[0] == 13:
                     print "Please run as root!"
@@ -160,13 +187,13 @@ class AdwareController(object):
             # Fallback to the cached file.
             try:
                 with open(cache_path, "r") as cache_file:
-                    adware_text = cache_file.read()
+                    app_text = cache_file.read()
             except IOError as error:
                 self.logger.log("Error: No cached copy of %s or other error %s"
                                 % (source, error.message))
-        if adware_text:
+        if app_text:
             try:
-                adf_element = ElementTree.fromstring(adware_text)
+                adf_element = ElementTree.fromstring(app_text)
             except ElementTree.ParseError as err:
                 logger = Logger()
                 logger.log("ADF at %s is invalid XML (Error: %s)" %
@@ -175,7 +202,10 @@ class AdwareController(object):
 
             if adf_element is not None:
                 self.warn_if_old_version(adf_element)
-                self.adwares.extend([Adware(adware) for adware in
+                self.apps.extend([App(app) for app in
+                                     adf_element.findall("App")])
+                # See historical note at top.
+                self.apps.extend([App(app) for app in
                                      adf_element.findall("Adware")])
 
     def warn_if_old_version(self, adf_element):
@@ -190,20 +220,25 @@ class AdwareController(object):
         if min_version_elem is not None:
             min_version = StrictVersion(min_version_elem.text)
             if min_version > StrictVersion(__version__):
+                app_names = ", ".join([name.findtext("AppName") for name
+                                          in adf_element.findall("App")])
                 adware_names = ", ".join([name.findtext("AdwareName") for name
                                           in adf_element.findall("Adware")])
+                if adware_names:
+                    app_names += ", %" % adware_names
                 logger.log("%s require(s) SavingThrow version %s" %
-                           (adware_names, min_version))
+                           (app_names, min_version))
+
 
     def report_string(self):
         """Generate a nicely formatted string of findings."""
         result = ""
-        for adware in self.adwares:
-            if adware.found or adware.processes:
-                result += "Name: %s\n" % adware.name
-                for num, found in enumerate(adware.found, 1):
+        for app in self.apps:
+            if app.found or app.processes:
+                result += "Name: %s\n" % app.name
+                for num, found in enumerate(app.found, 1):
                     result += "File %s: %s\n" % (num, found)
-                for num, found in enumerate(adware.processes.items(), 1):
+                for num, found in enumerate(app.processes.items(), 1):
                     pids_string = ", ".join((str(pid) for pid in found[1]))
                     result += "Process %s: %s PID: %s\n" % (num, found[0],
                                                             pids_string)
@@ -214,9 +249,9 @@ class AdwareController(object):
         """Report back on identified files to STDOUT."""
         report_string = self.report_string()
         if report_string:
-            result = "Adware files and processes found:\n%s" % report_string
+            result = "Files and processes found:\n%s" % report_string
         else:
-            result = "No adware files or processes found."
+            result = "No files or processes found."
 
         Logger.vlog(result)
 
@@ -227,7 +262,7 @@ class AdwareController(object):
 
         Generates a report as XML and prints to STDOUT. Report is
         wrapped in <result> tags, with identified files numbered and
-        ordered by Adware type.
+        ordered by App type.
         """
         result = "<result>"
         report_string = self.report_string()
@@ -244,14 +279,14 @@ class AdwareController(object):
 
         Unloads launchd jobs, then removes all files and directories.
 
-        If files are removed between Adware.find() and now, it will
+        If files are removed between App.find() and now, it will
         complain about missing files.
 
         Raises:
             Handles expected exceptions by logging.
         """
-        files = [(afile, adware.name) for adware in self.adwares for afile in
-                 adware.found]
+        files = [(afile, app.name) for app in self.apps for afile in
+                 app.found]
         self.unload_and_disable_launchd_jobs([afile[0] for afile in files])
         for item, name in files:
             try:
@@ -259,9 +294,9 @@ class AdwareController(object):
                     shutil.rmtree(item)
                 elif os.path.isfile(item):
                     os.remove(item)
-                self.logger.log("Removed adware file: %s:%s" % (name, item))
+                self.logger.log("Removed file: %s:%s" % (name, item))
             except OSError as error:
-                self.logger.log("Failed to remove adware file: %s:%s Error: "
+                self.logger.log("Failed to remove file: %s:%s Error: "
                                 "%s" % (name, item, error))
 
     def quarantine(self):
@@ -271,14 +306,14 @@ class AdwareController(object):
         to a Quarantine subfolder of the CACHE. Finally, a zip archive
         is produced, and files are deleted.
 
-        If files are removed between Adware.find() and now, it will
+        If files are removed between App.find() and now, it will
         complain about missing files.
 
         Raises:
             Handles expected exceptions by logging.
         """
-        files = [(afile, adware.name) for adware in self.adwares for afile in
-                 adware.found]
+        files = [(afile, app.name) for app in self.apps for afile in
+                 app.found]
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         # Let's not bother if the list is empty.
         if files:
@@ -293,7 +328,7 @@ class AdwareController(object):
             for item, name in files:
                 try:
                     shutil.move(item, backup_dir)
-                    self.logger.log("Quarantined adware file: %s:%s"
+                    self.logger.log("Quarantined file: %s:%s"
                                     % (name, item))
                 except shutil.Error:
                     # Raised when moving a directory, and it already
@@ -311,7 +346,7 @@ class AdwareController(object):
                         except shutil.Error:
                             counter += 1
                 except OSError as error:
-                    self.logger.log("Failed to quarantine adware file: %s:%s "
+                    self.logger.log("Failed to quarantine file: %s:%s "
                                     "Error:  %s" % (name, item, error))
 
             zpath = os.path.join(quarantine_dir, "%s-Quarantine.zip" %
@@ -373,9 +408,9 @@ class AdwareController(object):
                     self.logger.log("Launchctl response: %s" % result.strip())
 
     def kill(self):
-        """Kill all processes found by controlled Adware(s)."""
-        kill_list = [pid for adware in self.adwares for process in
-                     adware.processes.values() for pid in process]
+        """Kill all processes found by controlled App(s)."""
+        kill_list = [pid for app in self.apps for process in
+                     app.processes.values() for pid in process]
         for process_id in kill_list:
             try:
                 subprocess.check_call(["kill", str(process_id)])
@@ -384,35 +419,37 @@ class AdwareController(object):
                 self.logger.log("Failed to kill process ID: %s" % process_id)
 
 
-class Adware(object):
-    """Represents one adware 'product', as defined in an Adware
+class App(object):
+    """Represents one 'product', as defined in an App
     Definition File (ADF).
 
     Attributes:
         xml: The ADF as an xml.etree.Element.
-        found: Set of adware files found on the current filesystem.
+        found: Set of files found on the current filesystem.
         processes: Dictionary of ProcessName: PIDs for currently
-            running adware processes.
+            running processes.
         name:
-            String name of Adware from ADF/AdwareName.
+            String name of product from ADF/AppName.
     """
 
     def __init__(self, xml):
         """Init instance variables and find on current filesystem.
 
         Args:
-            xml: root xml.etree.Element of an Adware Definition File.
+            xml: root xml.etree.Element of an App Definition File.
         """
         self.xml = xml
         self._env = {}
         self.found = set()
         self.processes = {}
-        self.name = self.xml.findtext("AdwareName")
+        # See historical note at top.
+        self.name = (self.xml.findtext("AppName") or
+                     self.xml.findtext("AdwareName"))
 
         self.find()
 
     def find(self):
-        """Identify adware files and processes on the system."""
+        """Identify files and processes on the system."""
         logger = Logger()
         candidates = set()
         process_candidates = set()
@@ -540,7 +577,7 @@ class Adware(object):
 
 def build_argparser():
     """Create our argument parser."""
-    description = ("Modular Adware Extension Attribute and "
+    description = ("Modular Undesired file Extension Attribute and "
                    "Removal Script. Call with no arguments to run as "
                    "an extension attribute, or with --remove or "
                    "--quarantine to operate as a cleanup tool.")
@@ -556,9 +593,9 @@ def build_argparser():
     mode_parser.add_argument(
         "-s", "--stdout", help="Print standard report.", action="store_true")
     mode_parser.add_argument(
-        "-r", "--remove", help="Remove offending files.", action="store_true")
+        "-r", "--remove", help="Remove files.", action="store_true")
     mode_parser.add_argument(
-        "-q", "--quarantine", help="Move offending files to quarantine "
+        "-q", "--quarantine", help="Move files to quarantine "
         "location.", action="store_true")
 
     return parser
@@ -581,9 +618,9 @@ def main():
     if args.verbose:
         logger.enable_verbose()
 
-    controller = AdwareController()
-    for source in NEFARIOUS_FILE_SOURCES:
-        controller.add_adware_from_url(source)
+    controller = FileController()
+    for source in ADF_FILE_SOURCES:
+        controller.add_app_from_url(source)
 
     # Which action should we perform? An EA has no arguments, so make
     # it the default.
